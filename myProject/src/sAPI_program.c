@@ -49,6 +49,7 @@ int main( void ){
    // ---------- REPETIR POR SIEMPRE --------------------------
    while( TRUE )
    {
+
       /* Si se presiona TEC1, enciende el LEDR */
 
       // Leer pin conectado a la tecla.
