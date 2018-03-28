@@ -26,6 +26,9 @@ void SysTick_Handler (void)
 }
 
 
+//__attribute__((section(".data.$RamLoc40"))) uint8_t frameBuffer[40 * 1024];
+
+
 #define INVALID_LED             0xFF
 #define INVALID_HALF_PERIOD     0xFFFFFFFF
 
@@ -82,14 +85,20 @@ int main (void)
     Board_Init               ();
     SysTick_Config           (SystemCoreClock / 1000);
 
+    // "arregla" el LED_GREEN: pin 81, P2_1, selecciona funcion GPIO5[1].
+    // debiera hacerlo en todos los leds, pero en este solo trae problemas.
+    Chip_SCU_PinMuxSet (2, 1, SCU_MODE_INACT | SCU_MODE_FUNC4);
+
     Chip_GPIO_SetPinDIRInput (LPC_GPIO_PORT, 0, 4);
     Chip_GPIO_SetPinDIRInput (LPC_GPIO_PORT, 0, 8);
 
     ledHalfPeriod = HalfPeriod[halfPeriodIndex];
 
+//    frameBuffer[2] = 0xFF;
+
     while (1)
     {
-        if (g_ticks > ledCurrentCount + ledHalfPeriod)
+        if (g_ticks >= ledCurrentCount + ledHalfPeriod)
         {
             ledCurrentCount = g_ticks + ledHalfPeriod;
         }
