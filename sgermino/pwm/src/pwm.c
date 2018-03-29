@@ -146,8 +146,8 @@ static void rewindTransition (struct PWM_AnimTransData* td)
             break;
 
         case PWM_AnimTransType_HOLD:
-            td->current = td->min;
-            td->max     = 0;
+            td->current = td->max;
+            td->min     = 0;
             break;
     }
 
@@ -208,8 +208,8 @@ static void updateAnimation (struct PWM_AnimationContext *ctx)
             break;
 
         case PWM_AnimTransType_HOLD:
-            td->max += td->step;
-            if (td->max >= PWM_PERIOD_RES)
+            td->min += td->step;
+            if (td->min >= PWM_PERIOD_RES)
             {
                 animationSetNextTransition (ctx);
             }
@@ -236,7 +236,7 @@ void PWM_StartAnimation (struct PWM_AnimationContext *ctx)
         if (td->duration)
         {
             rewindTransition (td);
-            ctx->intensity   = td->current;
+            ctx->intensity   = FIXED_U1616_TO_U8(td->current);
             ctx->status      = PWM_AnimStatus_PLAYING;
             return;
         }
