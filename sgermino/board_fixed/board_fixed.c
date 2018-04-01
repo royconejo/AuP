@@ -12,7 +12,7 @@ struct io_port_t
 
 
 static const struct io_port_t gpioButtons[] = {
-    {0, 4}, {0, 8}, {0, 9}, {1, 9}, {0xFF, 0}
+    {0, 4}, {0, 8}, {0, 9}, {1, 9}
 };
 
 
