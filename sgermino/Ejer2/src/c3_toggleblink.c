@@ -1,4 +1,4 @@
-#include "board.h"
+#include "board_fixed.h"
 
 /*
 Actividad
@@ -26,9 +26,6 @@ void SysTick_Handler (void)
 }
 
 
-//__attribute__((section(".data.$RamLoc40"))) uint8_t frameBuffer[40 * 1024];
-
-
 #define INVALID_LED             0xFF
 #define INVALID_HALF_PERIOD     0xFFFFFFFF
 
@@ -53,17 +50,9 @@ const uint32_t HalfPeriod[] =
 };
 
 
-uint32_t ledHalfPeriod      = 0;
-uint32_t ledCurrentCount    = 0;
-uint32_t ledCurrentIndex    = 0;
-uint32_t halfPeriodIndex    = 0;
-uint32_t tec1Pressed        = 0;
-uint32_t tec2Pressed        = 0;
-
-
-bool keyPressed (uint8_t port, uint8_t pin, uint32_t *pressed)
+static bool buttonPressed (enum Board_BTN button, uint32_t *pressed)
 {
-    if (!Chip_GPIO_GetPinState (LPC_GPIO_PORT, port, pin))
+    if (!Board_BTN_State (button))
     {
         if (! *pressed)
         {
@@ -81,20 +70,16 @@ bool keyPressed (uint8_t port, uint8_t pin, uint32_t *pressed)
 
 int main (void)
 {
-    SystemCoreClockUpdate    ();
-    Board_Init               ();
-    SysTick_Config           (SystemCoreClock / 1000);
+    SystemCoreClockUpdate   ();
+    Board_Init_Fixed        ();
+    SysTick_Config          (SystemCoreClock / 1000);
 
-    // "arregla" el LED_GREEN: pin 81, P2_1, selecciona funcion GPIO5[1].
-    // debiera hacerlo en todos los leds, pero en este solo trae problemas.
-    Chip_SCU_PinMuxSet (2, 1, SCU_MODE_INACT | SCU_MODE_FUNC4);
-
-    Chip_GPIO_SetPinDIRInput (LPC_GPIO_PORT, 0, 4);
-    Chip_GPIO_SetPinDIRInput (LPC_GPIO_PORT, 0, 8);
-
-    ledHalfPeriod = HalfPeriod[halfPeriodIndex];
-
-//    frameBuffer[2] = 0xFF;
+    uint32_t ledCurrentIndex    = 0;
+    uint32_t halfPeriodIndex    = 0;
+    uint32_t ledHalfPeriod      = HalfPeriod[halfPeriodIndex];
+    uint32_t ledCurrentCount    = 0;
+    uint32_t tec1Pressed        = 0;
+    uint32_t tec2Pressed        = 0;
 
     while (1)
     {
@@ -106,7 +91,7 @@ int main (void)
         Board_LED_Set (Led[ledCurrentIndex], ledCurrentCount > g_ticks);
 
         // TEC_1
-        if (keyPressed (0, 4, &tec1Pressed))
+        if (buttonPressed (Board_BTN_TEC_1, &tec1Pressed))
         {
             if ((ledHalfPeriod = HalfPeriod[++ halfPeriodIndex]) == INVALID_HALF_PERIOD)
             {
@@ -116,7 +101,7 @@ int main (void)
         }
 
         // TEC_2
-        if (keyPressed (0, 8, &tec2Pressed))
+        if (buttonPressed (Board_BTN_TEC_2, &tec2Pressed))
         {
             Board_LED_Set (Led[ledCurrentIndex], true);
             if (Led[++ ledCurrentIndex] == INVALID_LED)
