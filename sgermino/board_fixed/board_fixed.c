@@ -4,6 +4,9 @@
 // en el repositorio usado en el curso.
 
 
+#define BOARD_GPIO_BUTTONS_SIZE (sizeof(gpioButtons) / sizeof(struct io_port_t))
+
+
 struct io_port_t
 {
    uint8_t port;
@@ -39,21 +42,23 @@ static void Board_Debug_Init_Fixed ()
 
 static void Board_BTN_Init ()
 {
-    for (uint32_t i = 0; i < sizeof(gpioButtons) / sizeof(struct io_port_t); ++i)
+    for (uint32_t i = 0; i < BOARD_GPIO_BUTTONS_SIZE; ++i)
     {
-        Chip_GPIO_SetPinDIRInput (LPC_GPIO_PORT, gpioButtons[i].port, gpioButtons[i].pin);
+        Chip_GPIO_SetPinDIRInput (LPC_GPIO_PORT, gpioButtons[i].port,
+                                  gpioButtons[i].pin);
     }
 }
 
 
 bool Board_BTN_State (enum Board_BTN button)
 {
-   if (button < 0 || button >= (sizeof(gpioButtons) / sizeof(struct io_port_t)))
+   if (button < 0 || button >= BOARD_GPIO_BUTTONS_SIZE)
    {
        return false;
    }
 
-   return Chip_GPIO_GetPinState (LPC_GPIO_PORT, gpioButtons[button].port, gpioButtons[button].pin);
+   return Chip_GPIO_GetPinState (LPC_GPIO_PORT, gpioButtons[button].port,
+                                 gpioButtons[button].pin);
 }
 
 

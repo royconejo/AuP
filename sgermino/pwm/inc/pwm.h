@@ -1,6 +1,6 @@
 /*
-    PWM Library
-    Copyright (C) 2018 Santiago Germino
+    PWM Library.
+    Copyright (C) 2018 Santiago Germino.
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -15,7 +15,9 @@
     You should have received a copy of the GNU General Public License
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-    You can contact the author by e-mail: royconejo at gmail dot com
+    ===============
+    You can contact the author by e-mail:
+    royconejo (at) gmail (dot) com
 */
 
 #pragma once
