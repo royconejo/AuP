@@ -22,7 +22,7 @@ static const struct io_port_t gpioButtons[] = {
 static void Board_UART_Init_Fixed (LPC_USART_T *pUART)
 {
     Chip_SCU_PinMuxSet (7, 1, SCU_MODE_INACT | SCU_MODE_FUNC6);
-    Chip_SCU_PinMuxSet (7, 2, SCU_MODE_INACT | SCU_MODE_FUNC6);
+    Chip_SCU_PinMuxSet (7, 2, SCU_MODE_INACT | SCU_MODE_INBUFF_EN | SCU_MODE_FUNC6);
 }
 
 
