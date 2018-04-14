@@ -1,6 +1,7 @@
 #include "board_fixed.h"
 #include "cooperativeOs_isr.h"
 #include "cooperativeOs_scheduler.h"
+#include <stdlib.h>
 
 /*
 Actividad
@@ -206,6 +207,20 @@ static void uartSendTask ()
 }
 
 
+static bool isNumber (char* s)
+{
+    while (*s)
+    {
+        if (*s < '0' || *s > '9')
+        {
+            return false;
+        }
+        *s ++;
+    }
+    return true;
+}
+
+
 static void uartProcessTask ()
 {
     uint32_t recvBytes = (uartRecvPutIndex - uartRecvGetIndex) &
@@ -225,10 +240,20 @@ static void uartProcessTask ()
         uartRecvGetIndex = (uartRecvGetIndex + 1) & (UART_RECV_BUFFER_MAX - 1);
         ++ i;
     }
-    c[i] = 0;
+    c[i] = '\0';
     uartRecvGetIndex = (uartRecvGetIndex + recvBytes - i) & (UART_RECV_BUFFER_MAX - 1);
 
-    if (i == 1)
+    if (isNumber (c))
+    {
+        const int halfPeriod = atoi(c) >> 1;
+        sendMessage ("Nuevo periodo: ");
+        sendMessage (c);
+        sendMessage (".\n");
+
+        schedulerDeleteTask (ledTaskIndex);
+        ledTaskIndex = schedulerAddTask (blinkLedTask, 0, halfPeriod);
+    }
+    else if (i == 1)
     {
         switch (c[0])
         {
@@ -265,6 +290,9 @@ int main (void)
     SystemCoreClockUpdate   ();
     Board_Init_Fixed        ();
 
+    uartRecvBuffer[0]   = 'i';
+    uartRecvPutIndex    = 1;
+
     schedulerInit       ();
     ledTaskIndex = schedulerAddTask
                         (blinkLedTask       ,0  ,HalfPeriod[halfPeriodIndex]);
@@ -275,9 +303,6 @@ int main (void)
     schedulerAddTask    (uartProcessTask    ,0  ,12);
 
     schedulerStart      (1);
-
-    uartRecvBuffer[0]   = 'i';
-    uartRecvPutIndex    = 1;
 
     while (1)
     {
