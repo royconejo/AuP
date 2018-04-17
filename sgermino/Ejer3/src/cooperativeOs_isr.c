@@ -77,7 +77,7 @@ determined by the timer settings in the 'init' function.
 This version is triggered by Timer 2 interrupts:
 timer is automatically reloaded.
 -*------------------------------------------------------------------*/
-void schedulerUpdate ()
+void schedulerUpdate (uint32_t ticks)
 {
     // NOTE: calculations are in *TICKS* (not milliseconds)
     for (uint32_t i = 0; i < SCHEDULER_MAX_TASKS; ++i)

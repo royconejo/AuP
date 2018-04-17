@@ -3,15 +3,11 @@
 #include "board.h"
 
 
-enum Board_BTN
-{
-    Board_BTN_TEC_1 = 0,
-    Board_BTN_TEC_2,
-    Board_BTN_TEC_3,
-    Board_BTN_TEC_4,
-    Board_BTN_Invalid,
-};
+#define BOARD_TEC_1         0
+#define BOARD_TEC_2         1
+#define BOARD_TEC_3         2
+#define BOARD_TEC_4         3
 
 
 void Board_Init_Fixed       ();
-bool Board_BTN_State        (enum Board_BTN button);
+bool Board_TEC_GetStatus    (uint8_t button);

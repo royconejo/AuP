@@ -1,7 +1,11 @@
 #include "board_fixed.h"
-#include "cooperativeOs_isr.h"
-#include "cooperativeOs_scheduler.h"
-#include <stdlib.h>
+#include "uart.h"
+#include "indata.h"
+#include "btn.h"
+#include "text.h"
+#include "msgs.h"
+#include "copos.h"
+#include <string.h>
 
 /*
 Actividad
@@ -23,8 +27,20 @@ Actividad
 */
 
 
-volatile uint32_t g_ticks       = 0;
-void (* volatile g_tickHook)()  = NULL;
+/*
+    con cutecom la interaccion con el usuario se dificulta ya que no es un
+    emulador de terminal ni trabaja con mismo la terminal del sistema.
+
+    En particular, no es posible generar un prompt para que el usuario pueda
+    ingresar y editar un valor. Otra desventaja importante es que solo
+    representa ASCII basico (no acentos ni enie).
+
+    iniciar picocom:
+
+    picocom /dev/ttyUSB1 --baud=9600
+    salir con C-a C-q
+*/
+
 /*
     LPC4337 dispone de "16 B Receive and Transmit FIFOs."
     con una velocidad de 115200 bps configurado como 8N1 (9 bits), es necesario
@@ -39,13 +55,14 @@ void (* volatile g_tickHook)()  = NULL;
     En cuanto al buffer de entrada, uno de 160 bytes debe consumirse cada 12.5 o
     150 ms segun sea 115200 o 9600 bps.
 
-    En la salida y para que la FIFO no overflowee, hay que enviar hasta 16 bytes
-    de datos por cada entrada a la tarea en no menos que 2.50 o 300 ms segun sea
-    115000 o 9600 (3 y 350 ms para estar seguros).
+    En la salida y para que la FIFO no overflowee por tirarle mas datos de los
+    que puede enviar, hay que enviar hasta 16 bytes de datos por cada entrada a
+    la tarea en no menos de 2 a 15 ms segun sea 115000 o 9600.
 */
 
-#define UART_RECV_BUFFER_MAX    256
-#define UART_SEND_BUFFER_MAX    1024
+
+volatile uint32_t g_ticks                       = 0;
+void (* volatile g_tickHook)(uint32_t ticks)    = NULL;
 
 
 void SysTick_Handler (void)
@@ -54,7 +71,7 @@ void SysTick_Handler (void)
 
     if (g_tickHook)
     {
-        g_tickHook ();
+        g_tickHook (g_ticks);
     }
 }
 
@@ -75,6 +92,17 @@ const uint8_t Led[] =
 };
 
 
+const char *LedName[] =
+{
+    "rgb rojo",
+    "rgb verde",
+    "rgb azul",
+    "amarillo",
+    "rojo",
+    "verde"
+};
+
+
 const uint32_t HalfPeriod[] =
 {
     50,
@@ -84,204 +112,257 @@ const uint32_t HalfPeriod[] =
 };
 
 
-uint32_t ledCurrentIndex    = 0;
-uint32_t halfPeriodIndex    = 0;
-uint32_t tec1Pressed        = 0;
-uint32_t tec2Pressed        = 0;
-uint32_t ledTaskIndex       = 0;
-
-uint32_t uartRecvPutIndex   = 0;
-uint32_t uartRecvGetIndex   = 0;
-uint32_t uartSendPutIndex   = 0;
-uint32_t uartSendGetIndex   = 0;
-
-static uint8_t uartRecvBuffer [UART_RECV_BUFFER_MAX];
-static uint8_t uartSendBuffer [UART_SEND_BUFFER_MAX];
-
-
-static bool buttonPressed (enum Board_BTN button, uint32_t *pressed)
+enum ProcessTaskActivity
 {
-    if (!Board_BTN_State (button))
-    {
-        if (! *pressed)
-        {
-            *pressed = 1;
-            return true;
-        }
-    }
-    else if (*pressed)
-    {
-        *pressed = 0;
-    }
-    return false;
+    ProcessTaskActivity_GetCommand = 0,
+    ProcessTaskActivity_GetPeriodInput
+};
+
+
+struct APP_Context
+{
+    struct UART_Context         uartCtx;
+    struct INDATA_Context       indataCtx;
+    enum ProcessTaskActivity    processTaskActivity;
+
+    uint32_t ledCurrentIndex;
+    uint32_t halfPeriodIndex;
+    uint32_t tec1Pressed;
+    uint32_t tec2Pressed;
+    uint32_t ledTaskIndex;
+};
+
+
+static void currentLedMessage (struct UART_Context *uartCtx,
+                               const char *ledName)
+{
+    UART_PutMessage (uartCtx, MSGS_INFO_BEGIN "Led ");
+    UART_PutMessage (uartCtx, ledName);
+    UART_PutMessage (uartCtx, "." MSGS_INFO_END);
 }
 
 
-static void sendMessage (const char* msg)
+static void currentPeriodMessage (struct UART_Context *uartCtx, uint32_t period)
 {
-    while (*msg != '\0')
+    char strnum[12];
+    snprintf (strnum, sizeof(strnum), "%lu", period);
+
+    UART_PutMessage (uartCtx, MSGS_INFO_BEGIN "Periodo ");
+    UART_PutMessage (uartCtx, strnum);
+    UART_PutMessage (uartCtx, " ms." MSGS_INFO_END);
+}
+
+
+static void bufferStatsMessage (struct UART_Context *ctx)
+{
+    char strnum[12];
+    UART_PutMessage (ctx, MSGS_INFO_BEGIN
+                     "Estado de los buffers de I/O." MSGS_NL);
+
+    UART_PutMessage (ctx, MSGS_PREFIX_GROUP "Send writes      : ");
+    snprintf (strnum, sizeof(strnum), "%lu", ctx->sendWrites);
+    UART_PutMessage (ctx, strnum);
+    UART_PutMessage (ctx, " bytes." MSGS_NL);
+
+    UART_PutMessage (ctx, MSGS_PREFIX_GROUP "Send overflow    : ");
+    snprintf (strnum, sizeof(strnum), "%lu", ctx->sendOverflow);
+    UART_PutMessage (ctx, strnum);
+    UART_PutMessage (ctx, " bytes." MSGS_NL);
+
+    UART_PutMessage (ctx, MSGS_PREFIX_GROUP "Receive writes   : ");
+    snprintf (strnum, sizeof(strnum), "%lu", ctx->recvWrites);
+    UART_PutMessage (ctx, strnum);
+    UART_PutMessage (ctx, " bytes." MSGS_NL);
+
+    UART_PutMessage (ctx, MSGS_PREFIX_GROUP "Receive overflow : ");
+    snprintf (strnum, sizeof(strnum), "%lu", ctx->recvOverflow);
+    UART_PutMessage (ctx, strnum);
+    UART_PutMessage (ctx, " bytes.");
+
+    UART_PutMessage (ctx, MSGS_INFO_END);
+}
+
+
+static void nextLed (struct APP_Context *ctx)
+{
+    Board_LED_Set (Led[ctx->ledCurrentIndex], true);
+    if (Led[++ ctx->ledCurrentIndex] == INVALID_LED)
     {
-        uartSendBuffer[uartSendPutIndex] = *msg ++;
-        uartSendPutIndex = (uartSendPutIndex + 1) & (UART_SEND_BUFFER_MAX - 1);
+        ctx->ledCurrentIndex = 0;
+    }
+    currentLedMessage (&ctx->uartCtx, LedName[ctx->ledCurrentIndex]);
+}
+
+
+static void nextPeriod (struct APP_Context *ctx)
+{
+    if (HalfPeriod[++ ctx->halfPeriodIndex] == INVALID_HALF_PERIOD)
+    {
+        ctx->halfPeriodIndex = 0;
+    }
+
+    schedulerModifyTaskPeriod (ctx->ledTaskIndex,
+                               HalfPeriod[ctx->halfPeriodIndex]);
+
+    currentPeriodMessage (&ctx->uartCtx, HalfPeriod[ctx->halfPeriodIndex] << 1);
+}
+
+
+void blinkLedTask (void *ctx, uint32_t ticks)
+{
+    struct APP_Context *appCtx = (struct APP_Context *) ctx;
+    Board_LED_Toggle (Led[appCtx->ledCurrentIndex]);
+}
+
+
+void debounceTec1Task (void *ctx, uint32_t ticks)
+{
+    struct APP_Context *appCtx = (struct APP_Context *) ctx;
+    if (BTN_DebouncePressed (BOARD_TEC_1, ticks, 0, &appCtx->tec1Pressed))
+    {
+        nextPeriod (appCtx);
     }
 }
 
 
-static void blinkLedTask ()
+void debounceTec2Task (void *ctx, uint32_t ticks)
 {
-    Board_LED_Toggle (Led[ledCurrentIndex]);
-}
-
-
-static void nextLed ()
-{
-    Board_LED_Set (Led[ledCurrentIndex], true);
-    if (Led[++ ledCurrentIndex] == INVALID_LED)
+    struct APP_Context *appCtx = (struct APP_Context *) ctx;
+    if (BTN_DebouncePressed (BOARD_TEC_2, ticks, 0, &appCtx->tec2Pressed))
     {
-        ledCurrentIndex = 0;
+        nextLed (appCtx);
     }
 }
 
 
-static void nextPeriod ()
+void uartRecvTask (void *ctx, uint32_t ticks)
 {
-    if (HalfPeriod[++ halfPeriodIndex] == INVALID_HALF_PERIOD)
-    {
-        halfPeriodIndex = 0;
-    }
-
-    schedulerDeleteTask (ledTaskIndex);
-    ledTaskIndex = schedulerAddTask (blinkLedTask, 0,
-                                     HalfPeriod[halfPeriodIndex]);
+    struct UART_Context *uartCtx = (struct UART_Context *) ctx;
+    UART_Recv (uartCtx);
 }
 
 
-static void debounceTec1Task ()
+void uartSendTask (void *ctx, uint32_t ticks)
 {
-    if (buttonPressed (Board_BTN_TEC_1, &tec1Pressed))
-    {
-        nextPeriod ();
-    }
+    struct UART_Context *uartCtx = (struct UART_Context *) ctx;
+    UART_Send (uartCtx);
 }
 
 
-static void debounceTec2Task ()
+static void processCommand (struct APP_Context *ctx)
 {
-    if (buttonPressed (Board_BTN_TEC_2, &tec2Pressed))
+    struct UART_Context   *uartCtx = (struct UART_Context *)   &ctx->uartCtx;
+    struct INDATA_Context *indaCtx = (struct INDATA_Context *) &ctx->indataCtx;
+
+    const uint32_t Pending = UART_RecvPendingCount (uartCtx);
+    if (!Pending)
     {
-        nextLed ();
-    }
-}
-
-
-static void uartRecvTask ()
-{
-    int byte;
-    while ((byte = Board_UARTGetChar()) != EOF)
-    {
-        uartRecvBuffer[uartRecvPutIndex] = (uint8_t) byte;
-        uartRecvPutIndex = (uartRecvPutIndex + 1) & (UART_RECV_BUFFER_MAX - 1);
-    }
-}
-
-
-static void uartSendTask ()
-{
-    uint32_t sendBytes = (uartSendPutIndex - uartSendGetIndex) &
-                            (UART_SEND_BUFFER_MAX - 1);
-    if (!sendBytes)
-    {
+        // Nada que procesar
         return;
     }
 
-    if (sendBytes > 15)
+    if (Pending != 1)
     {
-        sendBytes = 15;
+        UART_PutMessage (uartCtx, TEXT_WRONGCOMMANDSIZE);
+        return;
     }
 
-    while (sendBytes --)
+    const uint8_t Command = UART_RecvPeek (uartCtx, 0);
+    switch (Command)
     {
-        Board_UARTPutChar (uartSendBuffer[uartSendGetIndex]);
-        uartSendGetIndex = (uartSendGetIndex + 1) & (UART_SEND_BUFFER_MAX - 1);
+        case 'i':
+            UART_PutMessage (uartCtx, TEXT_WELCOME);
+            break;
+
+        case 'p':
+            nextPeriod (ctx);
+            break;
+
+        case 'l':
+            nextLed (ctx);
+            break;
+
+        case 'n':
+            UART_PutMessage (uartCtx, TEXT_PERIODINPUT);
+
+            ctx->processTaskActivity = ProcessTaskActivity_GetPeriodInput;
+            INDATA_Begin (indaCtx, INDATA_TypeDecimal);
+            break;
+
+        case 's':
+            bufferStatsMessage (uartCtx);
+            break;
+
+        case 'c':
+            UART_PutMessage (uartCtx, TERM_CLEAR_SCREEN);
+            break;
+
+        default:
+            UART_PutMessage (uartCtx, TEXT_WRONGCOMMAND);
+            break;
     }
 }
 
 
-static bool isNumber (char* s)
+void uartProcessTask (void *ctx, uint32_t ticks)
 {
-    while (*s)
+    struct APP_Context      *appCtx = (struct APP_Context *) ctx;
+    struct UART_Context     *uartCtx;
+    struct INDATA_Context   *indaCtx;
+
+    uartCtx = (struct UART_Context *)   &appCtx->uartCtx;
+    indaCtx = (struct INDATA_Context *) &appCtx->indataCtx;
+
+    switch (appCtx->processTaskActivity)
     {
-        if (*s < '0' || *s > '9')
+        case ProcessTaskActivity_GetCommand:
+            processCommand (appCtx);
+            break;
+
+        case ProcessTaskActivity_GetPeriodInput:
         {
-            return false;
+            const enum INDATA_Status InSt = INDATA_Status (indaCtx);
+            if (InSt == INDATA_StatusPrompt)
+            {
+                INDATA_Process (indaCtx);
+                break;
+            }
+            else if (InSt == INDATA_StatusReady)
+            {
+                const int HalfPeriod = INDATA_Decimal (indaCtx) >> 1;
+                schedulerModifyTaskPeriod (appCtx->ledTaskIndex, HalfPeriod);
+                currentPeriodMessage (uartCtx, HalfPeriod << 1);
+            }
+
+            INDATA_End (indaCtx);
+            appCtx->processTaskActivity = ProcessTaskActivity_GetCommand;
+            break;
         }
-        *s ++;
+
+        default:
+            UART_PutMessage (uartCtx, TEXT_INVALIDTASKSTATUS);
+            INDATA_End (indaCtx);
+            appCtx->processTaskActivity = ProcessTaskActivity_GetCommand;
+            break;
     }
+
+    // uartProcessTask siempre debe consumir todos los datos disponibles
+    UART_RecvConsumePending (uartCtx);
+}
+
+
+bool APP_Init (struct APP_Context *ctx)
+{
+    if (!ctx)
+    {
+        return false;
+    }
+
+    memset (ctx, 0, sizeof(struct APP_Context));
+
+    UART_Init   (&ctx->uartCtx, DEBUG_UART, 9600);
+    INDATA_Init (&ctx->indataCtx, &ctx->uartCtx);
     return true;
-}
-
-
-static void uartProcessTask ()
-{
-    uint32_t recvBytes = (uartRecvPutIndex - uartRecvGetIndex) &
-                          (UART_RECV_BUFFER_MAX - 1);
-    if (!recvBytes)
-    {
-        return;
-    }
-
-    char        c[5];
-    uint32_t    i = 0;
-
-    // De lo que reciba solo proceso 4 bytes, el resto lo tiro
-    while (i < recvBytes && i < 4)
-    {
-        c[i] = uartRecvBuffer[uartRecvGetIndex];
-        uartRecvGetIndex = (uartRecvGetIndex + 1) & (UART_RECV_BUFFER_MAX - 1);
-        ++ i;
-    }
-    c[i] = '\0';
-    uartRecvGetIndex = (uartRecvGetIndex + recvBytes - i) & (UART_RECV_BUFFER_MAX - 1);
-
-    if (isNumber (c))
-    {
-        const int halfPeriod = atoi(c) >> 1;
-        sendMessage ("Nuevo periodo: ");
-        sendMessage (c);
-        sendMessage (".\n");
-
-        schedulerDeleteTask (ledTaskIndex);
-        ledTaskIndex = schedulerAddTask (blinkLedTask, 0, halfPeriod);
-    }
-    else if (i == 1)
-    {
-        switch (c[0])
-        {
-            case 'i':
-                sendMessage ("Bienvenido a \"Actividad 4\".\n"
-                             "Comandos:\n"
-                             "  'i': Este mensaje.\n"
-                             "  'l': Siguiente led.\n"
-                             "  'p': Siguiente periodo.\n");
-                break;
-
-            case 'l':
-                sendMessage ("Siguiente Led.\n");
-                nextLed ();
-                break;
-
-            case 'p':
-                sendMessage ("Siguiente Periodo.\n");
-                nextPeriod ();
-                break;
-
-            default:
-                sendMessage ("Comando no reconocido: '");
-                sendMessage (c);
-                sendMessage ("'.\n");
-                break;
-        }
-    }
 }
 
 
@@ -290,23 +371,27 @@ int main (void)
     SystemCoreClockUpdate   ();
     Board_Init_Fixed        ();
 
-    uartRecvBuffer[0]   = 'i';
-    uartRecvPutIndex    = 1;
+    struct APP_Context  appCtx;
+    APP_Init (&appCtx);
+
+    // Inserta comando para mostrar menu al principio del programa
+    UART_RecvInjectByte (&appCtx.uartCtx, 'i');
+
+    const uint32_t Hp = HalfPeriod[appCtx.halfPeriodIndex];
 
     schedulerInit       ();
-    ledTaskIndex = schedulerAddTask
-                        (blinkLedTask       ,0  ,HalfPeriod[halfPeriodIndex]);
-    schedulerAddTask    (debounceTec1Task   ,1  ,20);
-    schedulerAddTask    (debounceTec2Task   ,2  ,20);
-    schedulerAddTask    (uartRecvTask       ,0  ,1);
-    schedulerAddTask    (uartSendTask       ,0  ,3);
-    schedulerAddTask    (uartProcessTask    ,0  ,12);
-
+    appCtx.ledTaskIndex = schedulerAddTask
+                        (blinkLedTask       ,&appCtx            ,0  ,Hp);
+    schedulerAddTask    (debounceTec1Task   ,&appCtx            ,1  ,20);
+    schedulerAddTask    (debounceTec2Task   ,&appCtx            ,2  ,20);
+    schedulerAddTask    (uartRecvTask       ,&appCtx.uartCtx    ,0  ,14);
+    schedulerAddTask    (uartSendTask       ,&appCtx.uartCtx    ,0  ,16);
+    schedulerAddTask    (uartProcessTask    ,&appCtx            ,0  ,140);
     schedulerStart      (1);
 
     while (1)
     {
-        schedulerDispatchTasks ();
+        schedulerDispatchTasks (g_ticks);
     }
 
     return 0;

@@ -60,7 +60,7 @@ static bool buttonPressed (enum Board_BTN button, uint32_t *pressed)
             return true;
         }
     }
-    else if (*pressed < g_ticks)
+    else if (*pressed <= g_ticks)
     {
         *pressed = 0;
     }

@@ -4,17 +4,17 @@
 // en el repositorio usado en el curso.
 
 
-#define BOARD_GPIO_BUTTONS_SIZE (sizeof(gpioButtons) / sizeof(struct io_port_t))
+#define BOARD_GPIO_BUTTONS_SIZE (sizeof(GpioButtons) / sizeof(struct gpio_t))
 
 
-struct io_port_t
+struct gpio_t
 {
    uint8_t port;
    uint8_t pin;
 };
 
 
-static const struct io_port_t gpioButtons[] = {
+static const struct gpio_t GpioButtons[] = {
     {0, 4}, {0, 8}, {0, 9}, {1, 9}
 };
 
@@ -40,25 +40,25 @@ static void Board_Debug_Init_Fixed ()
 }
 
 
-static void Board_BTN_Init ()
+static void Board_TEC_Init ()
 {
     for (uint32_t i = 0; i < BOARD_GPIO_BUTTONS_SIZE; ++i)
     {
-        Chip_GPIO_SetPinDIRInput (LPC_GPIO_PORT, gpioButtons[i].port,
-                                  gpioButtons[i].pin);
+        Chip_GPIO_SetPinDIRInput (LPC_GPIO_PORT, GpioButtons[i].port,
+                                  GpioButtons[i].pin);
     }
 }
 
 
-bool Board_BTN_State (enum Board_BTN button)
+bool Board_TEC_GetStatus (uint8_t button)
 {
-   if (button < 0 || button >= BOARD_GPIO_BUTTONS_SIZE)
+   if (button >= BOARD_GPIO_BUTTONS_SIZE)
    {
        return false;
    }
 
-   return Chip_GPIO_GetPinState (LPC_GPIO_PORT, gpioButtons[button].port,
-                                 gpioButtons[button].pin);
+   return Chip_GPIO_GetPinState (LPC_GPIO_PORT, GpioButtons[button].port,
+                                 GpioButtons[button].pin);
 }
 
 
@@ -84,5 +84,5 @@ void Board_Init_Fixed ()
     // Configura los pulsadores TEC_1-4.
     // En board_sysinit.c se configura el SCU para input, pero en board.c
     // no se configura la direccion del GPIO! (si se hace con los LEDs)
-    Board_BTN_Init ();
+    Board_TEC_Init ();
 }
