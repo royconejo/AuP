@@ -1,5 +1,5 @@
 /*
-    uC UART Library
+    RETRO-CIAA™ Library
     Copyright 2018 Santiago Germino (royconejo@gmail.com)
 
     Redistribution and use in source and binary forms, with or without
@@ -61,7 +61,18 @@ bool INDATA_Begin (struct INDATA_Context *ctx, enum INDATA_Type type)
 }
 
 
-static bool checkIndex (struct INDATA_Context *ctx)
+enum INDATA_Status INDATA_Status (struct INDATA_Context *ctx)
+{
+    if (!ctx)
+    {
+        return INDATA_StatusDisabled;
+    }
+
+    return ctx->status;
+}
+
+
+static bool checkEndOfIndex (struct INDATA_Context *ctx)
 {
     if (ctx->index == INDATA_BUFFER_SIZE - 1)
     {
@@ -152,28 +163,23 @@ static bool checkInteraction (struct INDATA_Context *ctx, uint8_t val)
 }
 
 
-void INDATA_Process (struct INDATA_Context *ctx)
+bool INDATA_Prompt (struct INDATA_Context *ctx)
 {
+    if (!ctx || ctx->status != INDATA_StatusPrompt)
+    {
+        return false;
+    }
+
     const uint32_t Pending = UART_RecvPendingCount (ctx->uart);
     for (uint32_t i = 0; i < Pending; ++i)
     {
-        if (!checkIndex         (ctx) ||
+        if (!checkEndOfIndex    (ctx) ||
             !checkInteraction   (ctx, UART_RecvPeek (ctx->uart, i)))
         {
             break;
         }
     }
-}
-
-
-enum INDATA_Status INDATA_Status (struct INDATA_Context *ctx)
-{
-    if (!ctx)
-    {
-        return INDATA_StatusError;
-    }
-
-    return ctx->status;
+    return true;
 }
 
 

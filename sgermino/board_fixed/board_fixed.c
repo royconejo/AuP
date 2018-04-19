@@ -64,6 +64,9 @@ bool Board_TEC_GetStatus (uint8_t button)
 
 void Board_Init_Fixed ()
 {
+    // Deberia llamarse en board_sysinit.c
+    SystemCoreClockUpdate ();
+
     // Inicia el codigo para board Edu-CIAA en LPCOpen
     Board_Init ();
 
