@@ -30,6 +30,7 @@
 */
 #pragma once
 #include "uart.h"
+#include "array.h"
 
 
 #ifndef INDATA_BUFFER_SIZE
@@ -58,8 +59,8 @@ struct INDATA_Context
 {
     enum INDATA_Status  status;
     enum INDATA_Type    type;
-    uint32_t            index;
     struct UART_Context *uart;
+    struct ARRAY        a;
     uint8_t             data [INDATA_BUFFER_SIZE];
 };
 
@@ -70,5 +71,5 @@ bool                INDATA_Begin        (struct INDATA_Context *ctx,
                                          enum INDATA_Type type);
 enum INDATA_Status  INDATA_Status       (struct INDATA_Context *ctx);
 bool                INDATA_Prompt       (struct INDATA_Context *ctx);
-int32_t             INDATA_Decimal      (struct INDATA_Context *ctx);
+struct ARRAY *      INDATA_Data         (struct INDATA_Context *ctx);
 bool                INDATA_End          (struct INDATA_Context *ctx);

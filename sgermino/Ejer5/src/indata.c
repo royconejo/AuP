@@ -30,8 +30,8 @@
 */
 #include "indata.h"
 #include "text.h"
+#include "term.h"
 #include <string.h> // memset
-#include <stdlib.h> // atoi
 
 
 bool INDATA_Init (struct INDATA_Context *ctx, struct UART_Context *uartCtx)
@@ -42,6 +42,8 @@ bool INDATA_Init (struct INDATA_Context *ctx, struct UART_Context *uartCtx)
     }
 
     memset (ctx, 0, sizeof(struct INDATA_Context));
+
+    ARRAY_Init (&ctx->a, ctx->data, sizeof(ctx->data));
     ctx->uart = uartCtx;
     return true;
 }
@@ -56,7 +58,7 @@ bool INDATA_Begin (struct INDATA_Context *ctx, enum INDATA_Type type)
 
     ctx->status = INDATA_StatusPrompt;
     ctx->type   = type;
-    ctx->index  = 0;
+    ARRAY_Reset (&ctx->a);
     return true;
 }
 
@@ -74,24 +76,11 @@ enum INDATA_Status INDATA_Status (struct INDATA_Context *ctx)
 
 static bool checkEndOfIndex (struct INDATA_Context *ctx)
 {
-    if (ctx->index == INDATA_BUFFER_SIZE - 1)
+    if (ARRAY_Full (&ctx->a))
     {
         UART_PutMessage (ctx->uart, TEXT_INDATA_TOOLONG);
         ctx->status = INDATA_StatusInvalid;
         return false;
-    }
-    return true;
-}
-
-
-static bool checkTypeDecimal (struct INDATA_Context *ctx)
-{
-    for (uint32_t i = 0; ctx->data[i]; ++ i)
-    {
-        if (ctx->data[i] < '0' || ctx->data[i] > '9')
-        {
-            return false;
-        }
     }
     return true;
 }
@@ -105,12 +94,21 @@ static void validate (struct INDATA_Context *ctx)
     switch (ctx->type)
     {
         case INDATA_TypeDecimal:
-            if (checkTypeDecimal (ctx))
+            if (ARRAY_CheckDecimalChars (&ctx->a))
             {
                 ctx->status = INDATA_StatusReady;
                 break;
             }
             UART_PutMessage (ctx->uart, TEXT_INDATA_WRONGTYPEINT);
+            break;
+
+        case INDATA_TypeAlphanum:
+            if (ARRAY_CheckAlnumChars (&ctx->a))
+            {
+                ctx->status = INDATA_StatusReady;
+                break;
+            }
+            UART_PutMessage (ctx->uart, TEXT_INDATA_WRONGTYPEALNUM);
             break;
 
         default:
@@ -125,37 +123,22 @@ static bool checkInteraction (struct INDATA_Context *ctx, uint8_t val)
     switch (val)
     {
         case 0x0D:  // CR (Enter)
-            ctx->data[ctx->index] = '\0';
+            ARRAY_Terminate (&ctx->a);
             validate (ctx);
             return false;
 
         case 0x7F:  // DEL (Backspace)
-            if (!ctx->index)
+            if (ARRAY_RemoveChars (&ctx->a, 1))
             {
-                break;
+                UART_PutMessage (ctx->uart, TERM_CURSOR_LEFT(1) " "
+                                 TERM_CURSOR_LEFT(1));
             }
-
-            do
-            {
-                // NOTA: Asume entrada en ASCII o UTF-8
-                const uint8_t Byte = ctx->data[-- ctx->index];
-                // Caracter unico (ASCII) o comienzo de caracter multibyte
-                if (Byte <= 127 || Byte >= 192)
-                {
-                    break;
-                }
-            }
-            while (ctx->index);
-
-            UART_PutMessage (ctx->uart, TERM_CURSOR_LEFT(1) " "
-                             TERM_CURSOR_LEFT(1));
             break;
 
         default:
         {
-            ctx->data[ctx->index ++] = val;
-            char c[2] = { val, '\0' };
-            UART_PutMessage (ctx->uart, c);
+            ARRAY_Append    (&ctx->a, val);
+            UART_PutBinary  (ctx->uart, &val, 1);
             break;
         }
     }
@@ -183,19 +166,14 @@ bool INDATA_Prompt (struct INDATA_Context *ctx)
 }
 
 
-int32_t INDATA_Decimal (struct INDATA_Context *ctx)
+struct ARRAY * INDATA_Data (struct INDATA_Context *ctx)
 {
     if (!ctx || ctx->status != INDATA_StatusReady)
     {
-        return 0;
+        return NULL;
     }
 
-    if (ctx->type != INDATA_TypeDecimal)
-    {
-        return 0;
-    }
-
-    return atoi ((char *)ctx->data);
+    return &ctx->a;
 }
 
 

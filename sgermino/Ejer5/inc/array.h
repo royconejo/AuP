@@ -30,13 +30,26 @@
 */
 #pragma once
 #include <stdint.h>
+#include <stdbool.h>
 
 
-typedef void (* SYSTICK_HookFunc) (uint32_t ticks);
+struct ARRAY
+{
+    uint8_t     *data;
+    uint32_t    index;
+    uint32_t    capacity;
+};
 
 
-void                SYSTICK_SetMicrosecondPeriod    (uint32_t micro);
-void                SYSTICK_SetMillisecondPeriod    (uint32_t milli);
-uint32_t            SYSTICK_GetTickRateMicroseconds ();
-uint32_t            SYSTICK_Now                     ();
-SYSTICK_HookFunc    SYSTICK_SetHook                 (SYSTICK_HookFunc func);
+bool        ARRAY_Init                  (struct ARRAY *a, uint8_t *data,
+                                         uint32_t capacity);
+void        ARRAY_Reset                 (struct ARRAY *a);
+uint32_t    ARRAY_Elements              (struct ARRAY *a);
+bool        ARRAY_Full                  (struct ARRAY *a);
+bool        ARRAY_Append                (struct ARRAY *a, uint8_t element);
+bool        ARRAY_AppendString          (struct ARRAY *a, const char *str);
+uint32_t    ARRAY_RemoveChars           (struct ARRAY *a, uint32_t count);
+bool        ARRAY_Terminate             (struct ARRAY *a);
+bool        ARRAY_CheckAlnumChars       (struct ARRAY *a);
+bool        ARRAY_CheckDecimalChars     (struct ARRAY *a);
+bool        ARRAY_CheckEqualContents    (struct ARRAY *a, struct ARRAY *b);

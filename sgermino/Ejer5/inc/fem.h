@@ -43,7 +43,7 @@ enum FEM_Stage
     FEM_StageBegin = 0,
     FEM_StageMain,
     FEM_StageEnd,
-    FEM_StageInvalid
+    FEM_Stage_LAST_ = FEM_StageEnd
 };
 
 
@@ -64,18 +64,30 @@ struct FEM_Context
     FEM_StateFunc   state;
     enum FEM_Stage  stage;
     const char      *info;
-    uint32_t        calls;
+    uint32_t        stateCalls;
+    uint32_t        stageCalls;
+    uint32_t        stateStartTicks;
+    uint32_t        stageStartTicks;
+    uint32_t        stateCountdownTicks;
     void            *appCtx;
     FEM_StateFunc   invalidStage;
     FEM_StateFunc   maxRecCalls;
 };
 
 
-bool FEM_Init           (struct FEM_Context *ctx, void *appCtx);
-bool FEM_SetErrorStates (struct FEM_Context *ctx, FEM_StateFunc invalidStage,
-                         FEM_StateFunc maxRecurringCalls);
-bool FEM_SetStateInfo   (struct FEM_Context *ctx, const char* info);
-bool FEM_GotoStage      (struct FEM_Context *ctx, enum FEM_Stage newStage);
-bool FEM_ChangeState    (struct FEM_Context *ctx, FEM_StateFunc newState);
-bool FEM_Process        (struct FEM_Context *ctx, uint32_t curTicks,
-                         uint32_t timeoutTicks);
+bool        FEM_Init           (struct FEM_Context *ctx, void *appCtx);
+bool        FEM_SetErrorStates (struct FEM_Context *ctx,
+                                FEM_StateFunc invalidStage,
+                                FEM_StateFunc maxRecurringCalls);
+bool        FEM_SetStateInfo   (struct FEM_Context *ctx, const char* info);
+bool        FEM_StateTimeout   (struct FEM_Context *ctx, uint32_t timeoutTicks);
+bool        FEM_StageTimeout   (struct FEM_Context *ctx, uint32_t timeoutTicks);
+bool        FEM_StateCountdown (struct FEM_Context *ctx, uint32_t timeoutTicks);
+uint32_t    FEM_StateCountdownSeconds
+                                (struct FEM_Context *ctx);
+bool        FEM_GotoStage      (struct FEM_Context *ctx,
+                                enum FEM_Stage newStage);
+bool        FEM_ChangeState    (struct FEM_Context *ctx,
+                                FEM_StateFunc newState);
+bool        FEM_Process        (struct FEM_Context *ctx, uint32_t curTicks,
+                                uint32_t timeoutTicks);

@@ -63,7 +63,7 @@ bool UART_PutMessageArgs (struct UART_Context *ctx, const char *msg,
         }
         else
         {
-            UART_PutBinary (ctx, (uint8_t *)msg, i);
+            UART_PutBinary (ctx, (uint8_t *)msg, i + 1);
         }
     }
     return true;
@@ -72,6 +72,11 @@ bool UART_PutMessageArgs (struct UART_Context *ctx, const char *msg,
 
 void UART_PutStatusMessage (struct UART_Context *ctx)
 {
+    if (!ctx)
+    {
+        return;
+    }
+
     struct VARIANT args[4];
     VARIANT_SetUint32 (&args[0], ctx->sendWrites);
     VARIANT_SetUint32 (&args[1], ctx->sendOverflow);

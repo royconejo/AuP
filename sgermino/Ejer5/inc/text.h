@@ -31,10 +31,15 @@
 #pragma once
 
 
-extern const char* TEXT_UART_STATSBEGIN;
-extern const char* TEXT_UART_STATS;
-extern const char* TEXT_UART_STATSEND;
-extern const char* TEXT_INDATA_TOOLONG;
-extern const char* TEXT_INDATA_VALIDATING;
-extern const char* TEXT_INDATA_WRONGTYPEINT;
-extern const char* TEXT_INDATA_NOTYPEVAL;
+extern const char *TEXT_UART_STATSBEGIN;
+extern const char *TEXT_UART_STATS;
+extern const char *TEXT_UART_STATSEND;
+extern const char *TEXT_FEM_STATSBEGIN;
+extern const char *TEXT_FEM_STATS1;
+extern const char *TEXT_FEM_STATS2;
+extern const char *TEXT_FEM_STATSEND;
+extern const char *TEXT_INDATA_TOOLONG;
+extern const char *TEXT_INDATA_VALIDATING;
+extern const char *TEXT_INDATA_WRONGTYPEINT;
+extern const char *TEXT_INDATA_WRONGTYPEALNUM;
+extern const char *TEXT_INDATA_NOTYPEVAL;

@@ -29,14 +29,28 @@
     POSSIBILITY OF SUCH DAMAGE.
 */
 #pragma once
-#include <stdint.h>
 
-
-typedef void (* SYSTICK_HookFunc) (uint32_t ticks);
-
-
-void                SYSTICK_SetMicrosecondPeriod    (uint32_t micro);
-void                SYSTICK_SetMillisecondPeriod    (uint32_t milli);
-uint32_t            SYSTICK_GetTickRateMicroseconds ();
-uint32_t            SYSTICK_Now                     ();
-SYSTICK_HookFunc    SYSTICK_SetHook                 (SYSTICK_HookFunc func);
+// BASH
+#define TERM_CLEAR_SCREEN           "\033[2J"
+#define TERM_CURSOR_UP(n)           "\033[" #n "A"
+#define TERM_CURSOR_DOWN(n)         "\033[" #n "B"
+#define TERM_CURSOR_RIGHT(n)        "\033[" #n "C"
+#define TERM_CURSOR_LEFT(n)         "\033[" #n "D"
+#define TERM_COLOR(i,c)             "\033[" #i ";" #c "m"
+#define TERM_NO_COLOR               "\033[0m"
+#define TERM_COLOR_BLACK            TERM_COLOR(0,30)
+#define TERM_COLOR_RED              TERM_COLOR(0,31)
+#define TERM_COLOR_GREEN            TERM_COLOR(0,32)
+#define TERM_COLOR_BROWN            TERM_COLOR(0,33)
+#define TERM_COLOR_BLUE             TERM_COLOR(0,34)
+#define TERM_COLOR_PURPLE           TERM_COLOR(0,35)
+#define TERM_COLOR_CYAN             TERM_COLOR(0,36)
+#define TERM_COLOR_GRAY             TERM_COLOR(0,37)
+#define TERM_COLOR_BOLD_GRAY        TERM_COLOR(1,30)
+#define TERM_COLOR_BOLD_RED         TERM_COLOR(1,31)
+#define TERM_COLOR_BOLD_GREEN       TERM_COLOR(1,32)
+#define TERM_COLOR_BOLD_YELLOW      TERM_COLOR(1,33)
+#define TERM_COLOR_BOLD_BLUE        TERM_COLOR(1,34)
+#define TERM_COLOR_BOLD_PURPLE      TERM_COLOR(1,35)
+#define TERM_COLOR_BOLD_CYAN        TERM_COLOR(1,36)
+#define TERM_COLOR_WHITE            TERM_COLOR(1,37)

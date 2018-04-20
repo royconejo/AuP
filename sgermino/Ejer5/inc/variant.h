@@ -29,9 +29,8 @@
     POSSIBILITY OF SUCH DAMAGE.
 */
 #pragma once
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
+#include <stdint.h>
+#include <stdbool.h>
 
 
 enum VARIANT_Type
@@ -40,8 +39,7 @@ enum VARIANT_Type
     VARIANT_TypeInt32,
     VARIANT_TypeFloat,
     VARIANT_TypePointer,
-    VARIANT_TypeString,
-    VARIANT_TypeInvalid
+    VARIANT_TypeString
 };
 
 
@@ -60,12 +58,14 @@ struct VARIANT
 };
 
 
-void        VARIANT_SetUint32   (struct VARIANT *v, uint32_t u);
-void        VARIANT_SetInt32    (struct VARIANT *v, int32_t i);
-void        VARIANT_SetFloat    (struct VARIANT *v, float f);
-void        VARIANT_SetPointer  (struct VARIANT *v, void *p);
-void        VARIANT_SetString   (struct VARIANT *v, const char *s);
-uint32_t    VARIANT_ToUint32    (struct VARIANT *v);
-int32_t     VARIANT_ToInt32     (struct VARIANT *v);
-float       VARIANT_ToFloat     (struct VARIANT *v);
-const char* VARIANT_ToString    (struct VARIANT *v);
+void        VARIANT_SetUint32       (struct VARIANT *v, uint32_t u);
+void        VARIANT_SetInt32        (struct VARIANT *v, int32_t i);
+void        VARIANT_SetFloat        (struct VARIANT *v, float f);
+void        VARIANT_SetPointer      (struct VARIANT *v, void *p);
+void        VARIANT_SetString       (struct VARIANT *v, const char *s);
+uint32_t    VARIANT_ToUint32        (struct VARIANT *v);
+int32_t     VARIANT_ToInt32         (struct VARIANT *v);
+float       VARIANT_ToFloat         (struct VARIANT *v);
+const char* VARIANT_ToString        (struct VARIANT *v);
+bool        VARIANT_CmpStrings      (struct VARIANT *v, struct VARIANT *s);
+bool        VARIANT_CmpUint32s      (struct VARIANT *v, struct VARIANT *s);

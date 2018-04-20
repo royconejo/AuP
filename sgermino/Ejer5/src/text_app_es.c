@@ -45,10 +45,10 @@ const char *TEXT_WELCOME = {
     MSGS_NL
     "   'i' Este mensaje." MSGS_NL
     "   'p' Ingresar contraseña." MSGS_NL
-    "   'x' Cambiar contraseña." MSGS_NL
+    "   'x' Cancelar operación." MSGS_NL
     "   'a' Sensores." MSGS_NL
     "   's' Buffers de I/O." MSGS_NL
-    "   'm' Maquina de estado." MSGS_NL
+    "   'm' Máquina de estado." MSGS_NL
     "   'c' Borrar pantalla." MSGS_NL
     MSGS_NL
 };
@@ -63,11 +63,62 @@ const char *TEXT_PASSWORDINPUT = {
 };
 
 const char *TEXT_PASSWORDTOARM = {
-    MSGS_INFO("Alarma Desarmada, presione 'p' para ARMAR.")
+    MSGS_INFO("Alarma " TERM_COLOR_BOLD_GREEN "DESARMADA" TERM_NO_COLOR
+              ", presione 'p' para ARMAR.")
 };
 
 const char *TEXT_INVALIDPASSWORD = {
     MSGS_WARNING("Contraseña inválida.")
+};
+
+const char *TEXT_CHECKINGPASSWORD = {
+    MSGS_INFO("Comparando contraseña...")
+};
+
+const char *TEXT_WRONGPASSWORD = {
+    MSGS_WARNING("Contraseña incorrecta.")
+};
+
+const char *TEXT_PASSWORDMATCH = {
+    MSGS_INFO("Contraseña OK.")
+};
+
+const char *TEXT_ALARMARMINGBEGIN = {
+    MSGS_INFO("En %1 segundo(s) la alarma cambiará a estado ARMADA.")
+};
+
+const char *TEXT_ALARMARMINGCANCELLED = {
+    MSGS_WARNING("Armado de alarma CANCELADO.")
+};
+
+const char *TEXT_ALARMARMINGEND = {
+    MSGS_INFO("Armando alarma...")
+};
+
+const char *TEXT_ARMEDPASSWORDTODISARM = {
+    MSGS_INFO("Alarma " TERM_COLOR_BOLD_RED "ARMADA" TERM_NO_COLOR
+              ", presione 'p' para DESARMAR.")
+};
+
+const char *TEXT_SENSORWINDOW = {
+    MSGS_WARNING("SENSOR DE VENTANA ACTIVADO.")
+};
+
+const char *TEXT_SENSORDOOR = {
+    MSGS_WARNING("SENSOR DE PUERTA ACTIVADO.")
+};
+
+const char *TEXT_INTRUDERPASSWORDTODISARM = {
+    MSGS_CRITICAL("ALERTA DE INTRUSO! Presione 'p' para CANCELAR.")
+};
+
+const char *TEXT_DOORPASSWORDTODISARM = {
+    MSGS_INFO("Modo " TERM_COLOR_BOLD_RED "INTRUSO" TERM_NO_COLOR
+              " se activará en %1 segundo(s). Presione 'p' para CANCELAR.")
+};
+
+const char *TEXT_DOORPASSWORDTODISARMAGAIN = {
+    MSGS_WARNING("%1 intento(s) disponible(s).")
 };
 
 const char *TEXT_WRONGCOMMAND = {

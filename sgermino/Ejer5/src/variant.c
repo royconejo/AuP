@@ -29,6 +29,9 @@
     POSSIBILITY OF SUCH DAMAGE.
 */
 #include "variant.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
 
 void VARIANT_SetUint32 (struct VARIANT *v, uint32_t u)
@@ -104,8 +107,6 @@ uint32_t VARIANT_ToUint32 (struct VARIANT *v)
 
         case VARIANT_TypeString:
             return (uint32_t) strtoul (v->s, NULL, 0);
-
-        default: break;
     }
     return 0;
 }
@@ -129,10 +130,11 @@ int32_t VARIANT_ToInt32 (struct VARIANT *v)
         case VARIANT_TypeFloat:
             return (int32_t) v->f;
 
+        case VARIANT_TypePointer:
+            break;
+
         case VARIANT_TypeString:
             return (int32_t) strtol (v->s, NULL, 0);
-
-        default: break;
     }
     return 0;
 }
@@ -156,10 +158,11 @@ float VARIANT_ToFloat (struct VARIANT *v)
         case VARIANT_TypeFloat:
             return v->f;
 
+        case VARIANT_TypePointer:
+            break;
+
         case VARIANT_TypeString:
             return strtof (v->s, NULL);
-
-        default: break;
     }
     return 0;
 }
@@ -192,14 +195,54 @@ const char* VARIANT_ToString (struct VARIANT *v)
             break;
 
         case VARIANT_TypePointer:
-            snprintf (v->conv, sizeof(v->conv), "0x%p", v->p);
+            snprintf (v->conv, sizeof(v->conv), "%p", v->p);
             break;
 
         case VARIANT_TypeString:
             return v->s;
-
-        default: break;
     }
 
     return v->conv;
+}
+
+
+bool VARIANT_CmpStrings (struct VARIANT *v, struct VARIANT *s)
+{
+    if (!v || !s || !v->s || !s->s)
+    {
+        return false;
+    }
+
+    if (v->s == s->s)
+    {
+        return true;
+    }
+
+    uint32_t i = 0;
+    while (v->s[i] && s->s[i])
+    {
+        if (v->s[i] != s->s[i])
+        {
+            return false;
+        }
+        ++ i;
+    }
+
+    if (!v->s[i] && !s->s[i])
+    {
+        return true;
+    }
+
+    return false;
+}
+
+
+bool VARIANT_CmpUint32s (struct VARIANT *v, struct VARIANT *s)
+{
+    if (!v || !s)
+    {
+        return false;
+    }
+
+    return (VARIANT_ToUint32(v) == VARIANT_ToUint32(s));
 }

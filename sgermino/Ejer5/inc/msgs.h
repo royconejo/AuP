@@ -29,7 +29,7 @@
     POSSIBILITY OF SUCH DAMAGE.
 */
 #pragma once
-#include "uart.h"
+#include "term.h"
 
 
 #define MSGS_NL             "\r\n"
@@ -42,14 +42,13 @@
 #define MSGS_INFO_END       MSGS_NL
 #define MSGS_INFO(s)        MSGS_INFO_BEGIN s MSGS_INFO_END
 
-#define MSGS_WARNING_BEGIN  TERM_COLOR_BROWN \
-                            MSGS_PREFIX_WARNING
-#define MSGS_WARNING_END    TERM_NO_COLOR \
-                            MSGS_NL
-#define MSGS_WARNING(s)     MSGS_WARNING_BEGIN s MSGS_WARNING_END
-
-#define MSGS_ERROR_BEGIN    TERM_COLOR_RED \
+#define MSGS_COLOR_BEGIN(c) TERM_COLOR_##c \
                             MSGS_PREFIX_ERROR
-#define MSGS_ERROR_END      TERM_NO_COLOR \
+#define MSGS_COLOR_END      TERM_NO_COLOR \
                             MSGS_NL
-#define MSGS_ERROR(s)       MSGS_ERROR_BEGIN s MSGS_ERROR_END
+#define MSGS_COLOR(c,s)     MSGS_COLOR_BEGIN(c) s MSGS_COLOR_END
+
+#define MSGS_WARNING(s)     MSGS_COLOR(BROWN,s)
+#define MSGS_ERROR(s)       MSGS_COLOR(RED,s)
+#define MSGS_OK(s)          MSGS_COLOR(BOLD_GREEN,s)
+#define MSGS_CRITICAL(s)    MSGS_COLOR(BOLD_RED,s)

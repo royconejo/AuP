@@ -29,14 +29,9 @@
     POSSIBILITY OF SUCH DAMAGE.
 */
 #pragma once
-#include <stdint.h>
+#include "fem.h"
+#include "uart.h"
 
 
-typedef void (* SYSTICK_HookFunc) (uint32_t ticks);
-
-
-void                SYSTICK_SetMicrosecondPeriod    (uint32_t micro);
-void                SYSTICK_SetMillisecondPeriod    (uint32_t milli);
-uint32_t            SYSTICK_GetTickRateMicroseconds ();
-uint32_t            SYSTICK_Now                     ();
-SYSTICK_HookFunc    SYSTICK_SetHook                 (SYSTICK_HookFunc func);
+void FEM_PutStatusMessage (struct FEM_Context *ctx,
+                           struct UART_Context *uartCtx);

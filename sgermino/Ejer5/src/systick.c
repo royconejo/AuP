@@ -32,8 +32,9 @@
 #include "chip.h"   // CMSIS
 
 
-static volatile uint32_t            g_ticks     = 0;
-static volatile SYSTICK_HookFunc    g_tickHook  = NULL;
+static volatile uint32_t            g_ticks         = 0;
+static volatile SYSTICK_HookFunc    g_tickHook      = NULL;
+static uint32_t                     g_tickRateMicro = 0;
 
 
 void SysTick_Handler ()
@@ -50,12 +51,21 @@ void SysTick_Handler ()
 void SYSTICK_SetMicrosecondPeriod (uint32_t micro)
 {
     SysTick_Config ((SystemCoreClock * micro) / 1000000);
+    g_tickRateMicro = micro;
+
 }
 
 
 void SYSTICK_SetMillisecondPeriod (uint32_t milli)
 {
     SysTick_Config ((SystemCoreClock * milli) / 1000);
+    g_tickRateMicro = milli * 1000;
+}
+
+
+uint32_t SYSTICK_GetTickRateMicroseconds ()
+{
+    return g_tickRateMicro;
 }
 
 

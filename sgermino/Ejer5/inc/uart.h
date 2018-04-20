@@ -49,30 +49,6 @@
 #define UART_RECV_BUFFER_MASK   (UART_RECV_BUFFER_SIZE - 1)
 #define UART_SEND_BUFFER_MASK   (UART_SEND_BUFFER_SIZE - 1)
 
-// BASH
-#define TERM_CLEAR_SCREEN           "\033[2J"
-#define TERM_CURSOR_LEFT(n)         "\033[" #n "D"
-#define TERM_COLOR(i,c)             "\033[" #i ";" #c "m"
-#define TERM_NO_COLOR               "\033[0m"
-#define TERM_COLOR_RED              TERM_COLOR(0,31)
-#define TERM_COLOR_BROWN            TERM_COLOR(0,33)
-#define TERM_COLOR_BLUE             TERM_COLOR(0,34)
-#define TERM_COLOR_BOLD_RED         TERM_COLOR(1,31)
-#define TERM_COLOR_YELLOW           TERM_COLOR(1,33)
-#define TERM_COLOR_PURPLE           TERM_COLOR(0,35)
-
-
-
-#if 0
-Black       0;30     Dark Gray     1;30
-Blue        0;34     Light Blue    1;34
-Green       0;32     Light Green   1;32
-Cyan        0;36     Light Cyan    1;36
-Red         0;31     Light Red     1;31
-Purple      0;35     Light Purple  1;35
-Brown       0;33     Yellow        1;33
-Light Gray  0;37     White         1;37
-#endif
 
 struct UART_Context
 {

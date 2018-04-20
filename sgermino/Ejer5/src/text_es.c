@@ -47,7 +47,31 @@ const char *TEXT_UART_STATSEND = {
     MSGS_INFO_END
 };
 
+const char *TEXT_FEM_STATSBEGIN = {
+    MSGS_INFO_BEGIN "Parámetros de la máquina de estado." MSGS_NL
+};
 
+const char *TEXT_FEM_STATS1 = {
+    MSGS_PREFIX_GROUP "State             : %1." MSGS_NL
+    MSGS_PREFIX_GROUP "  info            : %2." MSGS_NL
+    MSGS_PREFIX_GROUP "  calls           : %3." MSGS_NL
+    MSGS_PREFIX_GROUP "  start ticks     : %4." MSGS_NL
+    MSGS_PREFIX_GROUP "  countdown ticks : %5." MSGS_NL
+    MSGS_PREFIX_GROUP "  app context     : %6." MSGS_NL
+    MSGS_PREFIX_GROUP "  Stage           : %7." MSGS_NL
+    MSGS_PREFIX_GROUP "    calls         : %8." MSGS_NL
+    MSGS_PREFIX_GROUP "    start ticks   : %9." MSGS_NL
+};
+
+const char *TEXT_FEM_STATS2 = {
+    MSGS_PREFIX_GROUP "Error states" MSGS_NL
+    MSGS_PREFIX_GROUP "  invalid stage   : %1." MSGS_NL
+    MSGS_PREFIX_GROUP "  max rec. calls  : %2." MSGS_NL
+};
+
+const char *TEXT_FEM_STATSEND = {
+    MSGS_INFO_END
+};
 
 const char *TEXT_INDATA_TOOLONG = {
     MSGS_NL MSGS_ERROR("Dato demasiado largo.")
@@ -59,6 +83,10 @@ const char *TEXT_INDATA_VALIDATING = {
 
 const char *TEXT_INDATA_WRONGTYPEINT = {
     MSGS_ERROR("El dato ingresado debe ser un numero entero.")
+};
+
+const char *TEXT_INDATA_WRONGTYPEALNUM = {
+    MSGS_ERROR("El dato ingresado debe ser un caracter alfanumérico.")
 };
 
 const char *TEXT_INDATA_NOTYPEVAL = {
