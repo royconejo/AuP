@@ -31,8 +31,11 @@
 #pragma once
 
 
+extern const char *TEXT_NEWLINE;
+extern const char *TEXT_REPLACEMENTCHAR;
 extern const char *TEXT_UART_STATSBEGIN;
-extern const char *TEXT_UART_STATS;
+extern const char *TEXT_UART_STATS1;
+extern const char *TEXT_UART_STATS2;
 extern const char *TEXT_UART_STATSEND;
 extern const char *TEXT_FEM_STATSBEGIN;
 extern const char *TEXT_FEM_STATS1;

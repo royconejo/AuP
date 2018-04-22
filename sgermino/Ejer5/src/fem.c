@@ -33,90 +33,90 @@
 #include <string.h>
 
 
-static enum FEM_StateReturn FEMState_DummyError (struct FEM_Context *ctx,
+static enum FEM_StateReturn FEMState_DummyError (struct FEM *f,
                                         enum FEM_Stage stage, uint32_t ticks)
 {
     return FEM_StateReturnYield;
 }
 
 
-bool FEM_Init (struct FEM_Context *ctx, void *appCtx)
+bool FEM_Init (struct FEM *f, void *app)
 {
-    if (!ctx)
+    if (!f)
     {
         return false;
     }
 
-    memset (ctx, 0, sizeof(struct FEM_Context));
-    ctx->appCtx         = appCtx;
-    ctx->invalidStage   = FEMState_DummyError;
-    ctx->maxRecCalls    = FEMState_DummyError;
+    memset (f, 0, sizeof(struct FEM));
+    f->app            = app;
+    f->invalidStage   = FEMState_DummyError;
+    f->maxRecCalls    = FEMState_DummyError;
     return true;
 }
 
 
-bool FEM_SetErrorStates (struct FEM_Context *ctx, FEM_StateFunc invalidStage,
+bool FEM_SetErrorStates (struct FEM *f, FEM_StateFunc invalidStage,
                          FEM_StateFunc maxRecurringCalls)
 {
-    if (!ctx)
+    if (!f)
     {
         return false;
     }
 
     if (invalidStage)
     {
-        ctx->invalidStage = invalidStage;
+        f->invalidStage = invalidStage;
     }
 
     if (maxRecurringCalls)
     {
-        ctx->maxRecCalls = maxRecurringCalls;
+        f->maxRecCalls = maxRecurringCalls;
     }
 
     return true;
 }
 
 
-bool FEM_SetStateInfo (struct FEM_Context *ctx, const char* info)
+bool FEM_SetStateInfo (struct FEM *f, const char* info)
 {
-    if (!ctx)
+    if (!f)
     {
         return false;
     }
 
-    ctx->info = info;
+    f->info = info;
     return true;
 }
 
 
-bool FEM_StateTimeout (struct FEM_Context *ctx, uint32_t timeoutTicks)
+bool FEM_StateTimeout (struct FEM *f, uint32_t timeoutTicks)
 {
-    return (ctx && ctx->stateStartTicks + timeoutTicks >= SYSTICK_Now());
+    return (f && f->stateStartTicks + timeoutTicks >= SYSTICK_Now());
 }
 
 
-bool FEM_StageTimeout (struct FEM_Context *ctx, uint32_t timeoutTicks)
+bool FEM_StageTimeout (struct FEM *f, uint32_t timeoutTicks)
 {
-    return (ctx && ctx->stageStartTicks + timeoutTicks <= SYSTICK_Now());
+    return (f && f->stageStartTicks + timeoutTicks <= SYSTICK_Now());
 }
 
 
-bool FEM_StateCountdown (struct FEM_Context *ctx, uint32_t timeoutTicks)
+bool FEM_StateCountdown (struct FEM *f, uint32_t timeoutTicks)
 {
-    if (!ctx)
+    if (!f)
     {
         return false;
     }
 
     const uint32_t NextTimeout = SYSTICK_Now() + timeoutTicks;
 
-    if (!ctx->stateCountdownTicks)
+    if (!f->stateCountdownTicks)
     {
-        ctx->stateCountdownTicks = NextTimeout;
+        f->stateCountdownTicks = NextTimeout;
     }
-    else if (SYSTICK_Now() >= ctx->stateCountdownTicks)
+    else if (SYSTICK_Now() >= f->stateCountdownTicks)
     {
-        ctx->stateCountdownTicks = timeoutTicks? NextTimeout : 0;
+        f->stateCountdownTicks = timeoutTicks? NextTimeout : 0;
         return true;
     }
 
@@ -124,60 +124,60 @@ bool FEM_StateCountdown (struct FEM_Context *ctx, uint32_t timeoutTicks)
 }
 
 
-uint32_t FEM_StateCountdownSeconds (struct FEM_Context *ctx)
+uint32_t FEM_StateCountdownSeconds (struct FEM *f)
 {
-    if (!ctx || !ctx->stateCountdownTicks)
+    if (!f || !f->stateCountdownTicks)
     {
         return 0;
     }
 
     const uint32_t Now = SYSTICK_Now ();
 
-    if (Now >= ctx->stateCountdownTicks)
+    if (Now >= f->stateCountdownTicks)
     {
         return 0;
     }
 
-    return (ctx->stateCountdownTicks - Now) / SYSTICK_GetTickRateMicroseconds();
+    return (f->stateCountdownTicks - Now) / SYSTICK_GetTickRateMicroseconds();
 }
 
 
-bool FEM_GotoStage (struct FEM_Context *ctx, enum FEM_Stage newStage)
+bool FEM_GotoStage (struct FEM *f, enum FEM_Stage newStage)
 {
     if (newStage > FEM_Stage_LAST_)
     {
         return false;
     }
 
-    ctx->stage              = newStage;
-    ctx->stageCalls         = 0;
-    ctx->stageStartTicks    = SYSTICK_Now ();
+    f->stage              = newStage;
+    f->stageCalls         = 0;
+    f->stageStartTicks    = SYSTICK_Now ();
     return true;
 }
 
 
-bool FEM_ChangeState (struct FEM_Context *ctx, FEM_StateFunc newState)
+bool FEM_ChangeState (struct FEM *f, FEM_StateFunc newState)
 {
-    if (!ctx || !newState)
+    if (!f || !newState)
     {
         return false;
     }
 
-    ctx->state                  = newState;
-    ctx->info                   = NULL;
-    ctx->stateCalls             = 0;
-    ctx->stateStartTicks        = SYSTICK_Now ();
-    ctx->stateCountdownTicks    = 0;
+    f->state                  = newState;
+    f->info                   = NULL;
+    f->stateCalls             = 0;
+    f->stateStartTicks        = SYSTICK_Now ();
+    f->stateCountdownTicks    = 0;
 
-    FEM_GotoStage (ctx, FEM_StageBegin);
+    FEM_GotoStage (f, FEM_StageBegin);
     return true;
 }
 
 
-bool FEM_Process (struct FEM_Context *ctx, uint32_t curTicks,
+bool FEM_Process (struct FEM *f, uint32_t curTicks,
                   uint32_t timeoutTicks)
 {
-    if (!ctx)
+    if (!f)
     {
         return false;
     }
@@ -191,7 +191,7 @@ bool FEM_Process (struct FEM_Context *ctx, uint32_t curTicks,
     enum FEM_StateReturn ret;
     do
     {
-        if (!ctx->state)
+        if (!f->state)
         {
             return false;
         }
@@ -201,22 +201,22 @@ bool FEM_Process (struct FEM_Context *ctx, uint32_t curTicks,
             break;
         }
 
-        if (ctx->stage > FEM_Stage_LAST_)
+        if (f->stage > FEM_Stage_LAST_)
         {
-            FEM_ChangeState     (ctx, ctx->invalidStage);
-            FEM_SetStateInfo    (ctx, "ERROR: Invalid stage.");
+            FEM_ChangeState     (f, f->invalidStage);
+            FEM_SetStateInfo    (f, "ERROR: Invalid stage.");
         }
         else if (FEM_MAX_RECURRING_CALLS && recurringCalls >=
                  FEM_MAX_RECURRING_CALLS)
         {
-            FEM_ChangeState     (ctx, ctx->maxRecCalls);
-            FEM_SetStateInfo    (ctx, "ERROR: Max recurring calls reached.");
+            FEM_ChangeState     (f, f->maxRecCalls);
+            FEM_SetStateInfo    (f, "ERROR: Max recurring calls reached.");
         }
 
-        ret = ctx->state (ctx, ctx->stage, SYSTICK_Now());
+        ret = f->state (f, f->stage, SYSTICK_Now());
 
-        ++ ctx->stateCalls;
-        ++ ctx->stageCalls;
+        ++ f->stateCalls;
+        ++ f->stageCalls;
         ++ recurringCalls;
     }
     while (ret == FEM_StateReturnAgain);

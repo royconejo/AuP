@@ -29,66 +29,43 @@
     POSSIBILITY OF SUCH DAMAGE.
 */
 #include "text.h"
-#include "msgs.h"
+#include "texstyle.h"
 
+// Text translated/localized to Spanish (Spain & Latam).
 
 const char *TEXT_UART_STATSBEGIN = {
-    MSGS_INFO_BEGIN "Estado de los buffers de I/O." MSGS_NL
-};
-
-const char *TEXT_UART_STATS = {
-    MSGS_PREFIX_GROUP "Send writes      : %1 bytes." MSGS_NL
-    MSGS_PREFIX_GROUP "Send overflow    : %2 bytes." MSGS_NL
-    MSGS_PREFIX_GROUP "Receive writes   : %3 bytes." MSGS_NL
-    MSGS_PREFIX_GROUP "Receive overflow : %4 bytes." MSGS_NL
+    TEXSTYLE_INFO_BEGIN "Estado de los buffers circulares de UART, en bytes:"
+    TEXSTYLE_NL
 };
 
 const char *TEXT_UART_STATSEND = {
-    MSGS_INFO_END
+    TEXSTYLE_INFO_END
 };
 
 const char *TEXT_FEM_STATSBEGIN = {
-    MSGS_INFO_BEGIN "Parámetros de la máquina de estado." MSGS_NL
-};
-
-const char *TEXT_FEM_STATS1 = {
-    MSGS_PREFIX_GROUP "State             : %1." MSGS_NL
-    MSGS_PREFIX_GROUP "  info            : %2." MSGS_NL
-    MSGS_PREFIX_GROUP "  calls           : %3." MSGS_NL
-    MSGS_PREFIX_GROUP "  start ticks     : %4." MSGS_NL
-    MSGS_PREFIX_GROUP "  countdown ticks : %5." MSGS_NL
-    MSGS_PREFIX_GROUP "  app context     : %6." MSGS_NL
-    MSGS_PREFIX_GROUP "  Stage           : %7." MSGS_NL
-    MSGS_PREFIX_GROUP "    calls         : %8." MSGS_NL
-    MSGS_PREFIX_GROUP "    start ticks   : %9." MSGS_NL
-};
-
-const char *TEXT_FEM_STATS2 = {
-    MSGS_PREFIX_GROUP "Error states" MSGS_NL
-    MSGS_PREFIX_GROUP "  invalid stage   : %1." MSGS_NL
-    MSGS_PREFIX_GROUP "  max rec. calls  : %2." MSGS_NL
+    TEXSTYLE_INFO_BEGIN "Parámetros de la máquina de estado:" TEXSTYLE_NL
 };
 
 const char *TEXT_FEM_STATSEND = {
-    MSGS_INFO_END
+    TEXSTYLE_INFO_END
 };
 
 const char *TEXT_INDATA_TOOLONG = {
-    MSGS_NL MSGS_ERROR("Dato demasiado largo.")
+    TEXSTYLE_NL TEXSTYLE_ERROR("Dato demasiado largo.")
 };
 
 const char *TEXT_INDATA_VALIDATING = {
-    MSGS_NL MSGS_PREFIX_GROUP "Validando dato ingresado..." MSGS_NL
+    TEXSTYLE_NL TEXSTYLE_PREFIX_GROUP "Validando dato ingresado..." TEXSTYLE_NL
 };
 
 const char *TEXT_INDATA_WRONGTYPEINT = {
-    MSGS_ERROR("El dato ingresado debe ser un numero entero.")
+    TEXSTYLE_ERROR("El dato ingresado debe ser un número entero.")
 };
 
 const char *TEXT_INDATA_WRONGTYPEALNUM = {
-    MSGS_ERROR("El dato ingresado debe ser un caracter alfanumérico.")
+    TEXSTYLE_ERROR("El dato ingresado debe ser un caracter alfanumérico.")
 };
 
 const char *TEXT_INDATA_NOTYPEVAL = {
-    MSGS_ERROR("Validacion no implementada para este tipo de dato.")
+    TEXSTYLE_ERROR("Validación no implementada para este tipo de dato.")
 };

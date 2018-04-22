@@ -39,6 +39,7 @@
 #include "btn.h"
 #include "copos.h"
 #include "systick.h"
+#include "text.h"
 #include "text_app.h"
 #include <string.h>
 
@@ -73,15 +74,15 @@ Actividad
 */
 
 
-enum FEM_StateReturn FEMState_Desarmada (struct FEM_Context *ctx,
+enum FEM_StateReturn FEMState_Desarmada (struct FEM *f,
                                         enum FEM_Stage stage, uint32_t ticks);
-enum FEM_StateReturn FEMState_DiegoArmando (struct FEM_Context *ctx,
+enum FEM_StateReturn FEMState_DiegoArmando (struct FEM *f,
                                        enum FEM_Stage stage, uint32_t ticks);
-enum FEM_StateReturn FEMState_Armada (struct FEM_Context *ctx,
+enum FEM_StateReturn FEMState_Armada (struct FEM *f,
                                       enum FEM_Stage stage, uint32_t ticks);
-enum FEM_StateReturn FEMState_Intruso (struct FEM_Context *ctx,
+enum FEM_StateReturn FEMState_Intruso (struct FEM *f,
                                        enum FEM_Stage stage, uint32_t ticks);
-enum FEM_StateReturn FEMState_Desarmando (struct FEM_Context *ctx,
+enum FEM_StateReturn FEMState_Desarmando (struct FEM *f,
                                           enum FEM_Stage stage, uint32_t ticks);
 
 
@@ -104,87 +105,93 @@ enum APP_PasswordLogicAction
 };
 
 
-struct APP_Context
+struct APP
 {
-    struct UART_Context     uartCtx;
-    struct INDATA_Context   indataCtx;
-    struct FEM_Context      mainFemCtx;
-    struct ARRAY            password;
-    uint8_t                 passwordData    [INDATA_BUFFER_SIZE];
-    bool                    passwordInRequest;
-    bool                    cancelRequest;
-    uint32_t                disarmRetries;
-    uint32_t                sensorStatus;
-    uint32_t                ledStatus;
-    uint32_t                tecDebounce     [4];
-    struct VARIANT          vtmp;
+    struct UART         uart;
+    struct INDATA       indata;
+    struct FEM          mainFem;
+    struct ARRAY        password;
+    uint8_t             passwordData    [INDATA_BUFFER_SIZE];
+    bool                passwordInRequest;
+    bool                cancelRequest;
+    uint32_t            disarmRetries;
+    uint32_t            sensorStatus;
+    uint32_t            ledStatus;
+    uint32_t            tecDebounce     [4];
+    struct VARIANT      vtmp;
 };
 
 
-bool APP_Init (struct APP_Context *ctx)
+bool APP_Init (struct APP *a)
 {
-    if (!ctx)
+    if (!a)
     {
         return false;
     }
 
-    memset (ctx, 0, sizeof(struct APP_Context));
+    memset (a, 0, sizeof(struct APP));
 
-    UART_Init       (&ctx->uartCtx, DEBUG_UART, 9600);
-    INDATA_Init     (&ctx->indataCtx, &ctx->uartCtx);
-    ARRAY_Init      (&ctx->password, ctx->passwordData,
-                     sizeof(ctx->passwordData));
-    FEM_Init        (&ctx->mainFemCtx, ctx);
-    FEM_ChangeState (&ctx->mainFemCtx, FEMState_Desarmada);
+    UART_Init       (&a->uart, DEBUG_UART, 9600);
+    INDATA_Init     (&a->indata, &a->uart);
+    ARRAY_Init      (&a->password, a->passwordData,
+                     sizeof(a->passwordData));
+    FEM_Init        (&a->mainFem, a);
+    FEM_ChangeState (&a->mainFem, FEMState_Desarmada);
 
     // Password inicial
-    ARRAY_AppendString (&ctx->password, "1234");
+    ARRAY_AppendString (&a->password, "1234");
     return true;
 }
 
 
-void APP_ClearRequests (struct APP_Context *ctx)
+void APP_ClearRequests (struct APP *a)
 {
-    ctx->passwordInRequest  = false;
-    ctx->cancelRequest      = false;
+    a->passwordInRequest  = false;
+    a->cancelRequest      = false;
+
+    // Cancela cualquier pedido de input en progreso
+    if (INDATA_Status(&a->indata) == INDATA_StatusPrompt)
+    {
+        UART_PutMessage (&a->uart, TEXT_NEWLINE);
+    }
+    INDATA_End (&a->indata);
 }
 
 
-bool APP_UpdateLed (struct APP_Context *ctx, uint8_t led, bool on,
+bool APP_UpdateLed (struct APP *a, uint8_t led, bool on,
                     bool toggling)
 {
-    if (!ctx || led > 5)
+    if (!a || led > 5)
     {
         return false;
     }
 
     led <<= 1;
-    ctx->ledStatus = (ctx->ledStatus & ~(0b11 << led)) |
+    a->ledStatus = (a->ledStatus & ~(0b11 << led)) |
                         (on << led) | (toggling << (led + 1));
     return true;
 }
 
 
-enum APP_PasswordLogicAction
-APP_PasswordLogic (struct APP_Context *ctx)
+enum APP_PasswordLogicAction APP_PasswordLogic (struct APP *a)
 {
-    struct UART_Context *uartCtx = (struct UART_Context *)   &ctx->uartCtx;
-    struct INDATA_Context *inCtx = (struct INDATA_Context *) &ctx->indataCtx;
+    struct UART   *uart   = (struct UART *)   &a->uart;
+    struct INDATA *indata = (struct INDATA *) &a->indata;
 
-    switch (INDATA_Status(inCtx))
+    switch (INDATA_Status(indata))
     {
         // No entrando datos
         case INDATA_StatusDisabled:
         default:
-            if (ctx->passwordInRequest)
+            if (a->passwordInRequest)
             {
                 // Se pidio ingresar password
-                APP_ClearRequests   (ctx);
-                UART_PutMessage     (uartCtx, TEXT_PASSWORDINPUT);
+                APP_ClearRequests   (a);
+                UART_PutMessage     (uart, TEXT_PASSWORDINPUT);
                 //  9)  Cuando se esté esperando que el usuario ingrese una
                 //      contraseña se debe encender el led RGB azul.
-                APP_UpdateLed       (ctx, LED_BLUE, true, false);
-                INDATA_Begin        (inCtx, INDATA_TypeAlphanum);
+                APP_UpdateLed       (a, LED_BLUE, true, false);
+                INDATA_Begin        (indata, INDATA_TypeAlphanum);
                 return APP_PasswordLogicAction_Asking;
             }
             return APP_PasswordLogicAction_None;
@@ -195,63 +202,62 @@ APP_PasswordLogic (struct APP_Context *ctx)
 
         // Datos disponibles
         case INDATA_StatusReady:
-            UART_PutMessage (uartCtx, TEXT_CHECKINGPASSWORD);
-            if (ARRAY_CheckEqualContents (&ctx->password, INDATA_Data(inCtx)))
+            UART_PutMessage (uart, TEXT_CHECKINGPASSWORD);
+            if (ARRAY_CheckEqualContents (&a->password, INDATA_Data(indata)))
             {
-                UART_PutMessage (uartCtx, TEXT_PASSWORDMATCH);
-                INDATA_End      (inCtx);
-                APP_UpdateLed   (ctx, LED_BLUE, false, false);
+                UART_PutMessage (uart, TEXT_PASSWORDMATCH);
+                INDATA_End      (indata);
+                APP_UpdateLed   (a, LED_BLUE, false, false);
                 return APP_PasswordLogicAction_Match;
             }
-            UART_PutMessage (uartCtx, TEXT_WRONGPASSWORD);
+            UART_PutMessage (uart, TEXT_WRONGPASSWORD);
             break;
 
         // Datos invalidos
         case INDATA_StatusInvalid:
-            UART_PutMessage (uartCtx, TEXT_INVALIDPASSWORD);
+            UART_PutMessage (uart, TEXT_INVALIDPASSWORD);
             break;
     }
 
-    INDATA_End      (inCtx);
-    APP_UpdateLed   (ctx, LED_BLUE, false, false);
+    INDATA_End      (indata);
+    APP_UpdateLed   (a, LED_BLUE, false, false);
     return APP_PasswordLogicAction_AskAgain;
 }
 
 
-enum FEM_StateReturn FEMState_Desarmada (struct FEM_Context *ctx,
+enum FEM_StateReturn FEMState_Desarmada (struct FEM *f,
                                         enum FEM_Stage stage, uint32_t ticks)
 {
-    FEM_SetStateInfo (ctx, __FUNCTION__);
+    FEM_SetStateInfo (f, __FUNCTION__);
 
-    struct APP_Context   *appCtx = (struct APP_Context *)    ctx->appCtx;
-    struct UART_Context *uartCtx = (struct UART_Context *)   &appCtx->uartCtx;
-    struct INDATA_Context *inCtx = (struct INDATA_Context *) &appCtx->indataCtx;
+    struct APP  *app  = (struct APP *)  f->app;
+    struct UART *uart = (struct UART *) &app->uart;
 
     switch (stage)
     {
         case FEM_StageBegin:
-            APP_ClearRequests   (appCtx);
+            APP_ClearRequests   (app);
             //  6)  Cuando la alarma esté desarmada se debe encender el led RGB
             //      verde fijo.
-            APP_UpdateLed       (appCtx, LED_GREEN, true, false);
-            UART_PutMessage     (uartCtx, TEXT_PASSWORDTOARM);
-            FEM_GotoStage       (ctx, FEM_StageMain);
+            APP_UpdateLed       (app, LED_GREEN, true, false);
+            UART_PutMessage     (uart, TEXT_PASSWORDTOARM);
+            FEM_GotoStage       (f, FEM_StageMain);
             break;
 
         case FEM_StageMain:
         {
-            const enum APP_PasswordLogicAction Pl = APP_PasswordLogic (appCtx);
+            const enum APP_PasswordLogicAction Pl = APP_PasswordLogic (app);
             if (Pl == APP_PasswordLogicAction_Asking)
             {
-                APP_UpdateLed       (appCtx, LED_GREEN, false, false);
+                APP_UpdateLed       (app, LED_GREEN, false, false);
             }
             else if (Pl == APP_PasswordLogicAction_AskAgain)
             {
-                FEM_GotoStage       (ctx, FEM_StageBegin);
+                FEM_GotoStage       (f, FEM_StageBegin);
             }
             else if (Pl == APP_PasswordLogicAction_Match)
             {
-                FEM_ChangeState     (ctx, FEMState_DiegoArmando);
+                FEM_ChangeState     (f, FEMState_DiegoArmando);
             }
             break;
         }
@@ -264,42 +270,42 @@ enum FEM_StateReturn FEMState_Desarmada (struct FEM_Context *ctx,
 }
 
 
-enum FEM_StateReturn FEMState_DiegoArmando (struct FEM_Context *ctx,
+enum FEM_StateReturn FEMState_DiegoArmando (struct FEM *f,
                                        enum FEM_Stage stage, uint32_t ticks)
 {
-    FEM_SetStateInfo (ctx, __FUNCTION__);
+    FEM_SetStateInfo (f, __FUNCTION__);
 
-    struct APP_Context   *appCtx = (struct APP_Context *)    ctx->appCtx;
-    struct UART_Context *uartCtx = (struct UART_Context *)   &appCtx->uartCtx;
+    struct APP  *app  = (struct APP *)  f->app;
+    struct UART *uart = (struct UART *) &app->uart;
 
     switch (stage)
     {
         case FEM_StageBegin:
-            APP_ClearRequests   (appCtx);
-            VARIANT_SetUint32   (&appCtx->vtmp, ARMING_PERIOD_MSEC / 1000);
-            UART_PutMessageArgs (uartCtx, TEXT_ALARMARMINGBEGIN,
-                                 &appCtx->vtmp, 1);
-            APP_UpdateLed       (appCtx, LED_GREEN, true, true);
-            FEM_GotoStage       (ctx, FEM_StageMain);
+            APP_ClearRequests   (app);
+            VARIANT_SetUint32   (&app->vtmp, ARMING_PERIOD_MSEC / 1000);
+            UART_PutMessageArgs (uart, TEXT_ALARMARMINGBEGIN,
+                                 &app->vtmp, 1);
+            APP_UpdateLed       (app, LED_GREEN, true, true);
+            FEM_GotoStage       (f, FEM_StageMain);
             break;
 
         case FEM_StageMain:
-            if (appCtx->cancelRequest)
+            if (app->cancelRequest)
             {
-                APP_ClearRequests   (appCtx);
-                UART_PutMessage     (uartCtx, TEXT_ALARMARMINGCANCELLED);
-                FEM_ChangeState     (ctx, FEMState_Desarmada);
+                APP_ClearRequests   (app);
+                UART_PutMessage     (uart, TEXT_ALARMARMINGCANCELLED);
+                FEM_ChangeState     (f, FEMState_Desarmada);
             }
-            else if (FEM_StageTimeout (ctx, ARMING_PERIOD_MSEC))
+            else if (FEM_StageTimeout (f, ARMING_PERIOD_MSEC))
             {
-                FEM_GotoStage (ctx, FEM_StageEnd);
+                FEM_GotoStage (f, FEM_StageEnd);
             }
             break;
 
         case FEM_StageEnd:
-            UART_PutMessage     (uartCtx, TEXT_ALARMARMINGEND);
-            APP_UpdateLed       (appCtx, LED_GREEN, false, false);
-            FEM_ChangeState     (ctx, FEMState_Armada);
+            UART_PutMessage     (uart, TEXT_ALARMARMINGEND);
+            APP_UpdateLed       (app, LED_GREEN, false, false);
+            FEM_ChangeState     (f, FEMState_Armada);
             break;
     }
 
@@ -307,64 +313,64 @@ enum FEM_StateReturn FEMState_DiegoArmando (struct FEM_Context *ctx,
 }
 
 
-enum FEM_StateReturn FEMState_Armada (struct FEM_Context *ctx,
+enum FEM_StateReturn FEMState_Armada (struct FEM *f,
                                       enum FEM_Stage stage, uint32_t ticks)
 {
-    FEM_SetStateInfo (ctx, __FUNCTION__);
+    FEM_SetStateInfo (f, __FUNCTION__);
 
-    struct APP_Context   *appCtx = (struct APP_Context *)    ctx->appCtx;
-    struct UART_Context *uartCtx = (struct UART_Context *)   &appCtx->uartCtx;
+    struct APP  *app  = (struct APP *)  f->app;
+    struct UART *uart = (struct UART *) &app->uart;
 
     switch (stage)
     {
         case FEM_StageBegin:
-            APP_ClearRequests   (appCtx);
-            UART_PutMessage     (uartCtx, TEXT_ARMEDPASSWORDTODISARM);
+            APP_ClearRequests   (app);
+            UART_PutMessage     (uart, TEXT_ARMEDPASSWORDTODISARM);
             //  7)  Cuando la alarma esté armada se debe encender el led RGB
             //      rojo fijo
-            APP_UpdateLed       (appCtx, LED_RED, true, false);
-            FEM_GotoStage       (ctx, FEM_StageMain);
+            APP_UpdateLed       (app, LED_RED, true, false);
+            FEM_GotoStage       (f, FEM_StageMain);
             break;
 
         case FEM_StageMain:
         {
             // Se activo un sensor?
-            if (appCtx->sensorStatus)
+            if (app->sensorStatus)
             {
-                FEM_GotoStage   (ctx, FEM_StageEnd);
+                FEM_GotoStage   (f, FEM_StageEnd);
                 return FEM_StateReturnAgain;
             }
 
-            const enum APP_PasswordLogicAction Pl = APP_PasswordLogic (appCtx);
+            const enum APP_PasswordLogicAction Pl = APP_PasswordLogic (app);
             if (Pl == APP_PasswordLogicAction_Asking)
             {
-                APP_UpdateLed   (appCtx, LED_RED, false, false);
+                APP_UpdateLed   (app, LED_RED, false, false);
             }
             else if (Pl == APP_PasswordLogicAction_AskAgain)
             {
-                FEM_GotoStage   (ctx, FEM_StageBegin);
+                FEM_GotoStage   (f, FEM_StageBegin);
             }
             else if (Pl == APP_PasswordLogicAction_Match)
             {
-                FEM_ChangeState (ctx, FEMState_Desarmada);
+                FEM_ChangeState (f, FEMState_Desarmada);
             }
             break;
         }
 
         case FEM_StageEnd:
             // Discrimina cual sensor se activo
-            if (appCtx->sensorStatus & ~SENSOR_DOOR)
+            if (app->sensorStatus & ~SENSOR_DOOR)
             {
-               UART_PutMessage  (uartCtx, TEXT_SENSORWINDOW);
-               FEM_ChangeState  (ctx, FEMState_Intruso);
+               UART_PutMessage  (uart, TEXT_SENSORWINDOW);
+               FEM_ChangeState  (f, FEMState_Intruso);
             }
-            else if (appCtx->sensorStatus & SENSOR_DOOR)
+            else if (app->sensorStatus & SENSOR_DOOR)
             {
-               UART_PutMessage  (uartCtx, TEXT_SENSORDOOR);
-               FEM_ChangeState  (ctx, FEMState_Desarmando);
+               UART_PutMessage  (uart, TEXT_SENSORDOOR);
+               FEM_ChangeState  (f, FEMState_Desarmando);
             }
 
-            APP_UpdateLed (appCtx, LED_RED, false, false);
+            APP_UpdateLed (app, LED_RED, false, false);
             break;
     }
 
@@ -372,39 +378,39 @@ enum FEM_StateReturn FEMState_Armada (struct FEM_Context *ctx,
 }
 
 
-enum FEM_StateReturn FEMState_Intruso (struct FEM_Context *ctx,
+enum FEM_StateReturn FEMState_Intruso (struct FEM *f,
                                         enum FEM_Stage stage, uint32_t ticks)
 {
-    FEM_SetStateInfo (ctx, __FUNCTION__);
+    FEM_SetStateInfo (f, __FUNCTION__);
 
-    struct APP_Context   *appCtx = (struct APP_Context *)    ctx->appCtx;
-    struct UART_Context *uartCtx = (struct UART_Context *)   &appCtx->uartCtx;
+    struct APP  *app  = (struct APP *)  f->app;
+    struct UART *uart = (struct UART *) &app->uart;
 
     switch (stage)
     {
         case FEM_StageBegin:
-            APP_ClearRequests   (appCtx);
-            UART_PutMessage     (uartCtx, TEXT_INTRUDERPASSWORDTODISARM);
+            APP_ClearRequests   (app);
+            UART_PutMessage     (uart, TEXT_INTRUDERPASSWORDTODISARM);
             //  8)  Cuando la alarma esté disparada (intruso) se debe parpadear
             //      el led RGB rojo.
-            APP_UpdateLed       (appCtx, LED_RED, true, true);
-            FEM_GotoStage       (ctx, FEM_StageMain);
+            APP_UpdateLed       (app, LED_RED, true, true);
+            FEM_GotoStage       (f, FEM_StageMain);
             break;
 
         case FEM_StageMain:
         {
-            const enum APP_PasswordLogicAction Pl = APP_PasswordLogic (appCtx);
+            const enum APP_PasswordLogicAction Pl = APP_PasswordLogic (app);
             if (Pl == APP_PasswordLogicAction_Asking)
             {
-                APP_UpdateLed   (appCtx, LED_RED, false, false);
+                APP_UpdateLed   (app, LED_RED, false, false);
             }
             else if (Pl == APP_PasswordLogicAction_AskAgain)
             {
-                FEM_GotoStage   (ctx, FEM_StageBegin);
+                FEM_GotoStage   (f, FEM_StageBegin);
             }
             else if (Pl == APP_PasswordLogicAction_Match)
             {
-                FEM_ChangeState (ctx, FEMState_Desarmada);
+                FEM_ChangeState (f, FEMState_Desarmada);
             }
             break;
         }
@@ -417,60 +423,60 @@ enum FEM_StateReturn FEMState_Intruso (struct FEM_Context *ctx,
 }
 
 
-enum FEM_StateReturn FEMState_Desarmando (struct FEM_Context *ctx,
-                                          enum FEM_Stage stage, uint32_t ticks)
+enum FEM_StateReturn FEMState_Desarmando (struct FEM *f, enum FEM_Stage stage,
+                                          uint32_t ticks)
 {
-    FEM_SetStateInfo (ctx, __FUNCTION__);
+    FEM_SetStateInfo (f, __FUNCTION__);
 
-    struct APP_Context   *appCtx = (struct APP_Context *)    ctx->appCtx;
-    struct UART_Context *uartCtx = (struct UART_Context *)   &appCtx->uartCtx;
+    struct APP  *app  = (struct APP *)  f->app;
+    struct UART *uart = (struct UART *) &app->uart;
 
     switch (stage)
     {
         case FEM_StageBegin:
-            appCtx->disarmRetries = 0;
-            FEM_StateCountdown  (ctx, DOOR_DISARMING_MSEC);
-            APP_ClearRequests   (appCtx);
-            VARIANT_SetUint32   (&appCtx->vtmp, FEM_StateCountdownSeconds(ctx));
-            UART_PutMessageArgs (uartCtx, TEXT_DOORPASSWORDTODISARM,
-                                 &appCtx->vtmp, 1);
-            APP_UpdateLed       (appCtx, LED_RED, true, false);
-            FEM_GotoStage       (ctx, FEM_StageMain);
+            app->disarmRetries = 0;
+            APP_ClearRequests   (app);
+            FEM_StateCountdown  (f, DOOR_DISARMING_MSEC);
+            VARIANT_SetUint32   (&app->vtmp, FEM_StateCountdownSeconds(f));
+            UART_PutMessageArgs (uart, TEXT_DOORPASSWORDTODISARM,
+                                 &app->vtmp, 1);
+            APP_UpdateLed       (app, LED_RED, true, false);
+            FEM_GotoStage       (f, FEM_StageMain);
             return FEM_StateReturnAgain;
 
         case FEM_StageMain:
-            if (FEM_StateCountdown (ctx, 0))
+            if (FEM_StateCountdown (f, 0))
             {
-                FEM_ChangeState (ctx, FEMState_Intruso);
+                FEM_ChangeState (f, FEMState_Intruso);
                 return FEM_StateReturnYield;
             }
 
-            const enum APP_PasswordLogicAction Pl = APP_PasswordLogic (appCtx);
+            const enum APP_PasswordLogicAction Pl = APP_PasswordLogic (app);
             if (Pl == APP_PasswordLogicAction_Asking)
             {
-                APP_UpdateLed       (appCtx, LED_RED, false, false);
+                APP_UpdateLed       (app, LED_RED, false, false);
             }
             else if (Pl == APP_PasswordLogicAction_AskAgain)
             {
-                if (++ appCtx->disarmRetries >= DOOR_DISARM_MAX_RETRIES)
+                if (++ app->disarmRetries >= DOOR_DISARM_MAX_RETRIES)
                 {
-                    FEM_ChangeState (ctx, FEMState_Intruso);
+                    FEM_ChangeState (f, FEMState_Intruso);
                     return FEM_StateReturnYield;
                 }
                 // Reintenta
-                APP_UpdateLed       (appCtx, LED_RED, true, false);
-                VARIANT_SetUint32   (&appCtx->vtmp, DOOR_DISARM_MAX_RETRIES -
-                                     appCtx->disarmRetries);
-                UART_PutMessageArgs (uartCtx, TEXT_DOORPASSWORDTODISARMAGAIN,
-                                     &appCtx->vtmp, 1);
-                VARIANT_SetUint32   (&appCtx->vtmp,
-                                     FEM_StateCountdownSeconds(ctx));
-                UART_PutMessageArgs (uartCtx, TEXT_DOORPASSWORDTODISARM,
-                                     &appCtx->vtmp, 1);
+                APP_UpdateLed       (app, LED_RED, true, false);
+                VARIANT_SetUint32   (&app->vtmp, DOOR_DISARM_MAX_RETRIES -
+                                     app->disarmRetries);
+                UART_PutMessageArgs (uart, TEXT_DOORPASSWORDTODISARMAGAIN,
+                                     &app->vtmp, 1);
+                VARIANT_SetUint32   (&app->vtmp,
+                                     FEM_StateCountdownSeconds(f));
+                UART_PutMessageArgs (uart, TEXT_DOORPASSWORDTODISARM,
+                                     &app->vtmp, 1);
             }
             else if (Pl == APP_PasswordLogicAction_Match)
             {
-                FEM_ChangeState     (ctx, FEMState_DiegoArmando);
+                FEM_ChangeState     (f, FEMState_DiegoArmando);
             }
             break;
 
@@ -484,23 +490,23 @@ enum FEM_StateReturn FEMState_Desarmando (struct FEM_Context *ctx,
 
 void uartRecvTask (void *ctx, uint32_t ticks)
 {
-    struct UART_Context *uartCtx = (struct UART_Context *) ctx;
-    UART_Recv (uartCtx);
+    struct UART *uart = (struct UART *) ctx;
+    UART_Recv (uart);
 }
 
 
 void uartSendTask (void *ctx, uint32_t ticks)
 {
-    struct UART_Context *uartCtx = (struct UART_Context *) ctx;
-    UART_Send (uartCtx);
+    struct UART *uart = (struct UART *) ctx;
+    UART_Send (uart);
 }
 
 
-static void processCommand (struct APP_Context *ctx)
+static void processCommand (struct APP *a)
 {
-    struct UART_Context *uartCtx = (struct UART_Context *) &ctx->uartCtx;
+    struct UART *uart = (struct UART *) &a->uart;
 
-    const uint32_t Pending = UART_RecvPendingCount (uartCtx);
+    const uint32_t Pending = UART_RecvPendingCount (uart);
     if (!Pending)
     {
         // Nada que procesar
@@ -509,39 +515,39 @@ static void processCommand (struct APP_Context *ctx)
 
     if (Pending != 1)
     {
-        UART_PutMessage (uartCtx, TEXT_WRONGCOMMANDSIZE);
+        UART_PutMessage (uart, TEXT_WRONGCOMMANDSIZE);
         return;
     }
 
-    const uint8_t Command = UART_RecvPeek (uartCtx, 0);
+    const uint8_t Command = UART_RecvPeek (uart, 0);
     switch (Command)
     {
         case 'i':
-            UART_PutMessage (uartCtx, TEXT_WELCOME);
+            UART_PutMessage (uart, TEXT_WELCOME);
             break;
 
         case 'p':
-            ctx->passwordInRequest = true;
+            a->passwordInRequest = true;
             break;
 
         case 'x':
-            ctx->cancelRequest = true;
+            a->cancelRequest = true;
             break;
 
         case 's':
-            UART_PutStatusMessage (uartCtx);
+            UART_PutStatusMessage (uart);
             break;
 
         case 'm':
-            FEM_PutStatusMessage (&ctx->mainFemCtx, uartCtx);
+            FEM_PutStatusMessage (&a->mainFem, uart);
             break;
 
         case 'c':
-            UART_PutMessage (uartCtx, TERM_CLEAR_SCREEN);
+            UART_PutMessage (uart, TERM_CLEAR_SCREEN);
             break;
 
         default:
-            UART_PutMessage (uartCtx, TEXT_WRONGCOMMAND);
+            UART_PutMessage (uart, TEXT_WRONGCOMMAND);
             break;
     }
 }
@@ -549,30 +555,30 @@ static void processCommand (struct APP_Context *ctx)
 
 void uartProcessTask (void *ctx, uint32_t ticks)
 {
-    struct APP_Context *appCtx = (struct APP_Context *) ctx;
+    struct APP *app = (struct APP *) ctx;
 
-    if (INDATA_Status(&appCtx->indataCtx) == INDATA_StatusPrompt)
+    if (INDATA_Status(&app->indata) == INDATA_StatusPrompt)
     {
-        INDATA_Prompt (&appCtx->indataCtx);
+        INDATA_Prompt (&app->indata);
     }
     else
     {
-        processCommand (appCtx);
+        processCommand (app);
     }
 
     // uartProcessTask siempre debe consumir todos los datos disponibles
-    UART_RecvConsumePending (&appCtx->uartCtx);
+    UART_RecvDiscardPending (&app->uart);
 }
 
 
 void ledUpdateTask (void *ctx, uint32_t ticks)
 {
-    struct APP_Context *appCtx = (struct APP_Context *) ctx;
+    struct APP *app = (struct APP *) ctx;
 
     for (uint32_t i = 0; i <= 5; ++i)
     {
-        const bool On     = appCtx->ledStatus & (1 << (i << 1));
-        const bool Toggle = appCtx->ledStatus & (1 << ((i << 1) + 1));
+        const bool On     = app->ledStatus & (1 << (i << 1));
+        const bool Toggle = app->ledStatus & (1 << ((i << 1) + 1));
 
         if (On && Toggle)
         {
@@ -587,21 +593,21 @@ void ledUpdateTask (void *ctx, uint32_t ticks)
 
 void debounceTecTask (void *ctx, uint32_t ticks)
 {
-    struct APP_Context *appCtx = (struct APP_Context *) ctx;
+    struct APP *app = (struct APP *) ctx;
 
     for (uint32_t i = BOARD_TEC_1; i <= BOARD_TEC_4; ++i)
     {
-        if (BTN_DebouncePressed (i, ticks, 0, &appCtx->tecDebounce[i]))
+        if (BTN_DebouncePressed (i, ticks, 0, &app->tecDebounce[i]))
         {
             // Togglea sensor correspondiente a la tecla presionada
             // NOTA: efecto de toggle generado para facilitar demostracion
-            if (appCtx->sensorStatus & (1 << i))
+            if (app->sensorStatus & (1 << i))
             {
-                appCtx->sensorStatus &= ~(1 << i);
+                app->sensorStatus &= ~(1 << i);
             }
             else
             {
-                appCtx->sensorStatus |= (1 << i);
+                app->sensorStatus |= (1 << i);
             }
         }
     }
@@ -610,19 +616,19 @@ void debounceTecTask (void *ctx, uint32_t ticks)
 
 void sensorOutputsTask (void *ctx, uint32_t ticks)
 {
-    struct APP_Context *appCtx = (struct APP_Context *) ctx;
+    struct APP *app = (struct APP *) ctx;
 
-    const uint32_t Sensors = appCtx->sensorStatus;
-    APP_UpdateLed (appCtx, LED_1, Sensors & SENSOR_WINDOW_1, false);
-    APP_UpdateLed (appCtx, LED_2, Sensors & SENSOR_WINDOW_2, false);
-    APP_UpdateLed (appCtx, LED_3, Sensors & SENSOR_WINDOW_3, false);
+    const uint32_t Sensors = app->sensorStatus;
+    APP_UpdateLed (app, LED_1, Sensors & SENSOR_WINDOW_1, false);
+    APP_UpdateLed (app, LED_2, Sensors & SENSOR_WINDOW_2, false);
+    APP_UpdateLed (app, LED_3, Sensors & SENSOR_WINDOW_3, false);
 }
 
 
 void alarmFEMTask (void *ctx, uint32_t ticks)
 {
-    struct APP_Context *appCtx = (struct APP_Context *) ctx;
-    FEM_Process (&appCtx->mainFemCtx, ticks, 1);
+    struct APP *app = (struct APP *) ctx;
+    FEM_Process (&app->mainFem, ticks, 1);
 }
 
 
@@ -630,20 +636,20 @@ int main (void)
 {
     Board_Init_Fixed ();
 
-    struct APP_Context  appCtx;
-    APP_Init (&appCtx);
+    struct APP app;
+    APP_Init (&app);
 
     // Inserta comando para mostrar menu al principio del programa
-    UART_RecvInjectByte (&appCtx.uartCtx, 'i');
+    UART_RecvInjectByte (&app.uart, 'i');
 
     schedulerInit       ();
-    schedulerAddTask    (uartRecvTask       ,&appCtx.uartCtx    ,0  ,14);
-    schedulerAddTask    (uartSendTask       ,&appCtx.uartCtx    ,0  ,16);
-    schedulerAddTask    (uartProcessTask    ,&appCtx            ,0  ,140);
-    schedulerAddTask    (ledUpdateTask      ,&appCtx            ,1  ,500);
-    schedulerAddTask    (debounceTecTask    ,&appCtx            ,1  ,20);
-    schedulerAddTask    (sensorOutputsTask  ,&appCtx            ,1  ,20);
-    schedulerAddTask    (alarmFEMTask       ,&appCtx            ,0  ,50);
+    schedulerAddTask    (uartRecvTask       ,&app.uart  ,0  ,14);
+    schedulerAddTask    (uartSendTask       ,&app.uart  ,0  ,16);
+    schedulerAddTask    (uartProcessTask    ,&app       ,0  ,140);
+    schedulerAddTask    (ledUpdateTask      ,&app       ,1  ,500);
+    schedulerAddTask    (debounceTecTask    ,&app       ,1  ,20);
+    schedulerAddTask    (sensorOutputsTask  ,&app       ,1  ,20);
+    schedulerAddTask    (alarmFEMTask       ,&app       ,0  ,50);
     schedulerStart      (1);
 
     while (1)

@@ -34,111 +34,111 @@
 #include <string.h> // memset
 
 
-bool INDATA_Init (struct INDATA_Context *ctx, struct UART_Context *uartCtx)
+bool INDATA_Init (struct INDATA *d, struct UART *uart)
 {
-    if (!ctx || !uartCtx)
+    if (!d || !uart)
     {
         return false;
     }
 
-    memset (ctx, 0, sizeof(struct INDATA_Context));
+    memset (d, 0, sizeof(struct INDATA));
 
-    ARRAY_Init (&ctx->a, ctx->data, sizeof(ctx->data));
-    ctx->uart = uartCtx;
+    ARRAY_Init (&d->a, d->data, sizeof(d->data));
+    d->uart = uart;
     return true;
 }
 
 
-bool INDATA_Begin (struct INDATA_Context *ctx, enum INDATA_Type type)
+bool INDATA_Begin (struct INDATA *d, enum INDATA_Type type)
 {
-    if (!ctx)
+    if (!d)
     {
         return false;
     }
 
-    ctx->status = INDATA_StatusPrompt;
-    ctx->type   = type;
-    ARRAY_Reset (&ctx->a);
+    d->status = INDATA_StatusPrompt;
+    d->type   = type;
+    ARRAY_Reset (&d->a);
     return true;
 }
 
 
-enum INDATA_Status INDATA_Status (struct INDATA_Context *ctx)
+enum INDATA_Status INDATA_Status (struct INDATA *d)
 {
-    if (!ctx)
+    if (!d)
     {
         return INDATA_StatusDisabled;
     }
 
-    return ctx->status;
+    return d->status;
 }
 
 
-static bool checkEndOfIndex (struct INDATA_Context *ctx)
+static bool checkEndOfIndex (struct INDATA *d)
 {
-    if (ARRAY_Full (&ctx->a))
+    if (ARRAY_Full (&d->a))
     {
-        UART_PutMessage (ctx->uart, TEXT_INDATA_TOOLONG);
-        ctx->status = INDATA_StatusInvalid;
+        UART_PutMessage (d->uart, TEXT_INDATA_TOOLONG);
+        d->status = INDATA_StatusInvalid;
         return false;
     }
     return true;
 }
 
 
-static void validate (struct INDATA_Context *ctx)
+static void validate (struct INDATA *d)
 {
-    UART_PutMessage (ctx->uart, TEXT_INDATA_VALIDATING);
-    ctx->status = INDATA_StatusInvalid;
+    UART_PutMessage (d->uart, TEXT_INDATA_VALIDATING);
+    d->status = INDATA_StatusInvalid;
 
-    switch (ctx->type)
+    switch (d->type)
     {
         case INDATA_TypeDecimal:
-            if (ARRAY_CheckDecimalChars (&ctx->a))
+            if (ARRAY_CheckDecimalChars (&d->a))
             {
-                ctx->status = INDATA_StatusReady;
+                d->status = INDATA_StatusReady;
                 break;
             }
-            UART_PutMessage (ctx->uart, TEXT_INDATA_WRONGTYPEINT);
+            UART_PutMessage (d->uart, TEXT_INDATA_WRONGTYPEINT);
             break;
 
         case INDATA_TypeAlphanum:
-            if (ARRAY_CheckAlnumChars (&ctx->a))
+            if (ARRAY_CheckAlnumChars (&d->a))
             {
-                ctx->status = INDATA_StatusReady;
+                d->status = INDATA_StatusReady;
                 break;
             }
-            UART_PutMessage (ctx->uart, TEXT_INDATA_WRONGTYPEALNUM);
+            UART_PutMessage (d->uart, TEXT_INDATA_WRONGTYPEALNUM);
             break;
 
         default:
-            UART_PutMessage (ctx->uart, TEXT_INDATA_NOTYPEVAL);
+            UART_PutMessage (d->uart, TEXT_INDATA_NOTYPEVAL);
             break;
     }
 }
 
 
-static bool checkInteraction (struct INDATA_Context *ctx, uint8_t val)
+static bool checkInteraction (struct INDATA *d, uint8_t val)
 {
     switch (val)
     {
         case 0x0D:  // CR (Enter)
-            ARRAY_Terminate (&ctx->a);
-            validate (ctx);
+            ARRAY_Terminate (&d->a);
+            validate (d);
             return false;
 
         case 0x7F:  // DEL (Backspace)
-            if (ARRAY_RemoveChars (&ctx->a, 1))
+            if (ARRAY_RemoveChars (&d->a, 1))
             {
-                UART_PutMessage (ctx->uart, TERM_CURSOR_LEFT(1) " "
+                UART_PutMessage (d->uart, TERM_CURSOR_LEFT(1) " "
                                  TERM_CURSOR_LEFT(1));
             }
             break;
 
         default:
         {
-            ARRAY_Append    (&ctx->a, val);
-            UART_PutBinary  (ctx->uart, &val, 1);
+            ARRAY_Append    (&d->a, val);
+            UART_PutBinary  (d->uart, &val, 1);
             break;
         }
     }
@@ -146,18 +146,18 @@ static bool checkInteraction (struct INDATA_Context *ctx, uint8_t val)
 }
 
 
-bool INDATA_Prompt (struct INDATA_Context *ctx)
+bool INDATA_Prompt (struct INDATA *d)
 {
-    if (!ctx || ctx->status != INDATA_StatusPrompt)
+    if (!d || d->status != INDATA_StatusPrompt)
     {
         return false;
     }
 
-    const uint32_t Pending = UART_RecvPendingCount (ctx->uart);
+    const uint32_t Pending = UART_RecvPendingCount (d->uart);
     for (uint32_t i = 0; i < Pending; ++i)
     {
-        if (!checkEndOfIndex    (ctx) ||
-            !checkInteraction   (ctx, UART_RecvPeek (ctx->uart, i)))
+        if (!checkEndOfIndex    (d) ||
+            !checkInteraction   (d, UART_RecvPeek (d->uart, i)))
         {
             break;
         }
@@ -166,25 +166,25 @@ bool INDATA_Prompt (struct INDATA_Context *ctx)
 }
 
 
-struct ARRAY * INDATA_Data (struct INDATA_Context *ctx)
+struct ARRAY * INDATA_Data (struct INDATA *d)
 {
-    if (!ctx || ctx->status != INDATA_StatusReady)
+    if (!d || d->status != INDATA_StatusReady)
     {
         return NULL;
     }
 
-    return &ctx->a;
+    return &d->a;
 }
 
 
-bool INDATA_End (struct INDATA_Context *ctx)
+bool INDATA_End (struct INDATA *d)
 {
-    if (!ctx)
+    if (!d)
     {
         return false;
     }
 
-    ctx->status = INDATA_StatusDisabled;
+    d->status = INDATA_StatusDisabled;
     return true;
 }
 

@@ -33,6 +33,6 @@
 #include "variant.h"
 
 
-bool    UART_PutMessageArgs     (struct UART_Context *ctx, const char *msg,
+bool    UART_PutMessageArgs     (struct UART *u, const char *msg,
                                  struct VARIANT argValues[], uint32_t argCount);
-void    UART_PutStatusMessage   (struct UART_Context *ctx);
+void    UART_PutStatusMessage   (struct UART *u);

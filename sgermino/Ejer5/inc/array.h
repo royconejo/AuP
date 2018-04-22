@@ -48,6 +48,8 @@ uint32_t    ARRAY_Elements              (struct ARRAY *a);
 bool        ARRAY_Full                  (struct ARRAY *a);
 bool        ARRAY_Append                (struct ARRAY *a, uint8_t element);
 bool        ARRAY_AppendString          (struct ARRAY *a, const char *str);
+bool        ARRAY_AppendBinary          (struct ARRAY *a, const uint8_t *data,
+                                         uint32_t size);
 uint32_t    ARRAY_RemoveChars           (struct ARRAY *a, uint32_t count);
 bool        ARRAY_Terminate             (struct ARRAY *a);
 bool        ARRAY_CheckAlnumChars       (struct ARRAY *a);

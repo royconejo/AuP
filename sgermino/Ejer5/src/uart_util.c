@@ -32,58 +32,91 @@
 #include "text.h"
 
 
-bool UART_PutMessageArgs (struct UART_Context *ctx, const char *msg,
+/*
+    Ventajas (para la documentacion):
+
+    1)  Sustitucion dependiente del comodin, no de la posicion (permite
+        i18n de strings).
+    2)  Datos pasados como variants, no posiciones de memoria a interpretar.
+    3)  Puede sustituir el mismo dato dos o mas veces.
+*/
+
+bool UART_PutMessageArgs (struct UART *u, const char *msg,
                           struct VARIANT argValues[], uint32_t argCount)
 {
-    if (!ctx || !msg || !argValues || !argCount)
+    if (!u || !msg || !argValues || !argCount)
     {
         return false;
     }
 
-    for (uint32_t i = 0; msg[i]; ++i)
+    uint32_t i = 0;
+
+    while (msg[i])
     {
         const char Next = msg[i + 1];
-        if (Next)
+        if (!Next)
         {
-            if (msg[i] == '%')
+            UART_PutBinary (u, (uint8_t *)msg, i + 1);
+            break;
+        }
+
+        if (msg[i] != '%')
+        {
+            ++ i;
+            continue;
+        }
+
+        // msg[i] == '%' && Next
+        UART_PutBinary (u, (uint8_t *)msg, i);  // {.. ..}%[Next]
+        if (Next >= '1' && Next <= '9')         // %([1-9]{1})
+        {
+            const uint32_t arg = Next - 49;
+            if (arg < argCount)
             {
-                UART_PutBinary (ctx, (uint8_t *)msg, i);
-                msg = &msg[i + 2];              // %.[0]
-                i   = 0;
-                if (Next >= 49 && Next <= 57)   // [1-9]{1}
-                {
-                    const uint32_t arg = Next - 49;
-                    if (arg < argCount)
-                    {
-                        UART_PutMessage (ctx,
-                                         VARIANT_ToString(&argValues[arg]));
-                    }
-                }
+                UART_PutMessage (u, VARIANT_ToString(&argValues[arg]));
             }
         }
-        else
+        else if (Next == '%')
         {
-            UART_PutBinary (ctx, (uint8_t *)msg, i + 1);
+            // "%%" = escape sequence for a single '%'
+            UART_PutBinary (u, (uint8_t *)&Next, 1);
         }
+        else {
+            // Invalid char following '%'
+            UART_PutMessage (u, TEXT_REPLACEMENTCHAR);
+        }
+        msg = &msg[i + 2];                      // %.[0]
+        i = 0;
     }
+
     return true;
 }
 
 
-void UART_PutStatusMessage (struct UART_Context *ctx)
+void UART_PutStatusMessage (struct UART *u)
 {
-    if (!ctx)
+    if (!u)
     {
         return;
     }
 
-    struct VARIANT args[4];
-    VARIANT_SetUint32 (&args[0], ctx->sendWrites);
-    VARIANT_SetUint32 (&args[1], ctx->sendOverflow);
-    VARIANT_SetUint32 (&args[2], ctx->recvWrites);
-    VARIANT_SetUint32 (&args[3], ctx->recvOverflow);
+    struct VARIANT args[8];
 
-    UART_PutMessage     (ctx, TEXT_UART_STATSBEGIN);
-    UART_PutMessageArgs (ctx, TEXT_UART_STATS, args, 4);
-    UART_PutMessage     (ctx, TEXT_UART_STATSEND);
+    UART_PutMessage     (u, TEXT_UART_STATSBEGIN);
+    VARIANT_SetUint32   (&args[0], UART_SEND_BUFFER_SIZE);
+    VARIANT_SetUint32   (&args[1], u->send.reads);
+    VARIANT_SetUint32   (&args[2], u->send.writes);
+    VARIANT_SetUint32   (&args[3], u->send.overflows);
+    VARIANT_SetUint32   (&args[4], u->send.peeks);
+    VARIANT_SetUint32   (&args[5], u->send.discards);
+    UART_PutMessageArgs (u, TEXT_UART_STATS1, args, 6);
+
+    VARIANT_SetUint32   (&args[0], UART_RECV_BUFFER_SIZE);
+    VARIANT_SetUint32   (&args[1], u->recv.reads);
+    VARIANT_SetUint32   (&args[2], u->recv.writes);
+    VARIANT_SetUint32   (&args[3], u->recv.overflows);
+    VARIANT_SetUint32   (&args[4], u->recv.peeks);
+    VARIANT_SetUint32   (&args[5], u->recv.discards);
+    UART_PutMessageArgs (u, TEXT_UART_STATS2, args, 6);
+    UART_PutMessage     (u, TEXT_UART_STATSEND);
 }

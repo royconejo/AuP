@@ -29,6 +29,7 @@
     POSSIBILITY OF SUCH DAMAGE.
 */
 #pragma once
+#include "cyclic.h"
 #include <stdint.h>
 #include <stdbool.h>
 
@@ -46,41 +47,27 @@
     #define UART_SEND_BUFFER_SIZE   2048
 #endif
 
-#define UART_RECV_BUFFER_MASK   (UART_RECV_BUFFER_SIZE - 1)
-#define UART_SEND_BUFFER_MASK   (UART_SEND_BUFFER_SIZE - 1)
 
-
-struct UART_Context
+struct UART
 {
-    // Put: productor ingresa datos, Get: consumidor procesa datos
-    uint32_t    recvPutIndex;
-    uint32_t    recvGetIndex;
-    uint32_t    sendPutIndex;
-    uint32_t    sendGetIndex;
-
-    // Estadisticas de uso de los buffers
-    uint32_t    recvWrites;
-    uint32_t    recvOverflow;
-    uint32_t    sendWrites;
-    uint32_t    sendOverflow;
-
+    struct CYCLIC   recv;
+    struct CYCLIC   send;
+    uint8_t         recvData[UART_RECV_BUFFER_SIZE];
+    uint8_t         sendData[UART_SEND_BUFFER_SIZE];
     // Platform dependant UART handler
-    void        *handler;
-
-    uint8_t     recv [UART_RECV_BUFFER_SIZE];
-    uint8_t     send [UART_SEND_BUFFER_SIZE];
+    void            *handler;
 };
 
 
-bool        UART_Init               (struct UART_Context *ctx, void *handler,
+bool        UART_Init               (struct UART *u, void *handler,
                                      uint32_t baudRate);
-uint32_t    UART_SendPendingCount   (struct UART_Context *ctx);
-uint32_t    UART_RecvPendingCount   (struct UART_Context *ctx);
-bool        UART_PutBinary          (struct UART_Context *ctx,
+uint32_t    UART_SendPendingCount   (struct UART *u);
+uint32_t    UART_RecvPendingCount   (struct UART *u);
+bool        UART_PutBinary          (struct UART *u,
                                      const uint8_t *data, uint32_t size);
-bool        UART_PutMessage         (struct UART_Context *ctx, const char *msg);
-uint32_t    UART_Send               (struct UART_Context *ctx);
-uint32_t    UART_Recv               (struct UART_Context *ctx);
-bool        UART_RecvInjectByte     (struct UART_Context *ctx, uint8_t byte);
-uint8_t     UART_RecvPeek           (struct UART_Context *ctx, uint32_t offset);
-bool        UART_RecvConsumePending (struct UART_Context *ctx);
+bool        UART_PutMessage         (struct UART *u, const char *msg);
+uint32_t    UART_Send               (struct UART *u);
+uint32_t    UART_Recv               (struct UART *u);
+bool        UART_RecvInjectByte     (struct UART *u, uint8_t byte);
+uint8_t     UART_RecvPeek           (struct UART *u, uint32_t offset);
+bool        UART_RecvDiscardPending (struct UART *u);

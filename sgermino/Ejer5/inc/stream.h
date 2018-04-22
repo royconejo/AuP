@@ -29,8 +29,9 @@
     POSSIBILITY OF SUCH DAMAGE.
 */
 #pragma once
-#include "fem.h"
-#include "uart.h"
+#include <stdint.h>
+#include <stdbool.h>
 
 
-void FEM_PutStatusMessage (struct FEM *f, struct UART *uart);
+typedef uint32_t (* STREAM_ByteInFunc)  (void *handler);
+typedef bool     (* STREAM_ByteOutFunc) (void *handler, uint8_t byte);

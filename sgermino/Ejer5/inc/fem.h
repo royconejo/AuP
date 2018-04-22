@@ -54,12 +54,12 @@ enum FEM_StateReturn
 };
 
 
-struct FEM_Context;
-typedef enum FEM_StateReturn (* FEM_StateFunc) (struct FEM_Context *ctx,
+struct FEM;
+typedef enum FEM_StateReturn (* FEM_StateFunc) (struct FEM *f,
                                          enum FEM_Stage stage, uint32_t ticks);
 
 
-struct FEM_Context
+struct FEM
 {
     FEM_StateFunc   state;
     enum FEM_Stage  stage;
@@ -69,25 +69,23 @@ struct FEM_Context
     uint32_t        stateStartTicks;
     uint32_t        stageStartTicks;
     uint32_t        stateCountdownTicks;
-    void            *appCtx;
+    void            *app;
     FEM_StateFunc   invalidStage;
     FEM_StateFunc   maxRecCalls;
 };
 
 
-bool        FEM_Init           (struct FEM_Context *ctx, void *appCtx);
-bool        FEM_SetErrorStates (struct FEM_Context *ctx,
+bool        FEM_Init           (struct FEM *f, void *app);
+bool        FEM_SetErrorStates (struct FEM *f,
                                 FEM_StateFunc invalidStage,
                                 FEM_StateFunc maxRecurringCalls);
-bool        FEM_SetStateInfo   (struct FEM_Context *ctx, const char* info);
-bool        FEM_StateTimeout   (struct FEM_Context *ctx, uint32_t timeoutTicks);
-bool        FEM_StageTimeout   (struct FEM_Context *ctx, uint32_t timeoutTicks);
-bool        FEM_StateCountdown (struct FEM_Context *ctx, uint32_t timeoutTicks);
+bool        FEM_SetStateInfo   (struct FEM *f, const char* info);
+bool        FEM_StateTimeout   (struct FEM *f, uint32_t timeoutTicks);
+bool        FEM_StageTimeout   (struct FEM *f, uint32_t timeoutTicks);
+bool        FEM_StateCountdown (struct FEM *f, uint32_t timeoutTicks);
 uint32_t    FEM_StateCountdownSeconds
-                                (struct FEM_Context *ctx);
-bool        FEM_GotoStage      (struct FEM_Context *ctx,
-                                enum FEM_Stage newStage);
-bool        FEM_ChangeState    (struct FEM_Context *ctx,
-                                FEM_StateFunc newState);
-bool        FEM_Process        (struct FEM_Context *ctx, uint32_t curTicks,
+                               (struct FEM *f);
+bool        FEM_GotoStage      (struct FEM *f, enum FEM_Stage newStage);
+bool        FEM_ChangeState    (struct FEM *f, FEM_StateFunc newState);
+bool        FEM_Process        (struct FEM *f, uint32_t curTicks,
                                 uint32_t timeoutTicks);

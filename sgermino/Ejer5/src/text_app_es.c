@@ -29,102 +29,103 @@
     POSSIBILITY OF SUCH DAMAGE.
 */
 #include "text_app.h"
-#include "msgs.h"
+#include "texstyle.h"
 
 
 const char *TEXT_WELCOME = {
-    MSGS_NL
-    "                                                                 Bienvenido a..." MSGS_NL
+    TEXSTYLE_NL
+    "                                                                 Bienvenido a..." TEXSTYLE_NL
     " █████╗  ██████╗███████╗      █████╗ ██╗      █████╗ ██████╗ ███╗   ███╗ █████╗ "
     "██╔══██╗██╔════╝██╔════╝██╗  ██╔══██╗██║     ██╔══██╗██╔══██╗████╗ ████║██╔══██╗"
     "███████║██║     ███████╗╚═╝  ███████║██║     ███████║██████╔╝██╔████╔██║███████║"
     "██╔══██║██║     ╚════██║██╗  ██╔══██║██║     ██╔══██║██╔══██╗██║╚██╔╝██║██╔══██║"
     "██║  ██║╚██████╗███████║╚═╝  ██║  ██║███████╗██║  ██║██║  ██║██║ ╚═╝ ██║██║  ██║"
     "╚═╝  ╚═╝ ╚═════╝╚══════╝     ╚═╝  ╚═╝╚══════╝╚═╝  ╚═╝╚═╝  ╚═╝╚═╝     ╚═╝╚═╝  ╚═╝"
-    "Comandos:" MSGS_NL
-    MSGS_NL
-    "   'i' Este mensaje." MSGS_NL
-    "   'p' Ingresar contraseña." MSGS_NL
-    "   'x' Cancelar operación." MSGS_NL
-    "   'a' Sensores." MSGS_NL
-    "   's' Buffers de I/O." MSGS_NL
-    "   'm' Máquina de estado." MSGS_NL
-    "   'c' Borrar pantalla." MSGS_NL
-    MSGS_NL
+    "Comandos:" TEXSTYLE_NL
+    TEXSTYLE_NL
+    "   'i' Este mensaje." TEXSTYLE_NL
+    "   'p' Ingresar contraseña." TEXSTYLE_NL
+    "   'x' Cancelar operación." TEXSTYLE_NL
+    "   'a' Sensores." TEXSTYLE_NL
+    "   's' Buffers de I/O." TEXSTYLE_NL
+    "   'm' Máquina de estado." TEXSTYLE_NL
+    "   'c' Borrar pantalla." TEXSTYLE_NL
+    TEXSTYLE_NL
 };
 
 const char *TEXT_WRONGCOMMANDSIZE = {
-    MSGS_ERROR("El tamaño de comando es incorrecto.")
+    TEXSTYLE_ERROR("El tamaño de comando es incorrecto.")
 };
 
 const char *TEXT_PASSWORDINPUT = {
-    MSGS_INFO("Ingrese contraseña y presione [ENTER] para continuar.")
-              MSGS_PREFIX_GROUP ": "
+    TEXSTYLE_INFO("Ingrese contraseña y presione [ENTER] para continuar.")
+              TEXSTYLE_PREFIX_GROUP ": "
 };
 
 const char *TEXT_PASSWORDTOARM = {
-    MSGS_INFO("Alarma " TERM_COLOR_BOLD_GREEN "DESARMADA" TERM_NO_COLOR
+    TEXSTYLE_INFO("Alarma " TERM_FG_COLOR_BOLD_GREEN "DESARMADA" TERM_NO_COLOR
               ", presione 'p' para ARMAR.")
 };
 
 const char *TEXT_INVALIDPASSWORD = {
-    MSGS_WARNING("Contraseña inválida.")
+    TEXSTYLE_WARNING("Contraseña inválida.")
 };
 
 const char *TEXT_CHECKINGPASSWORD = {
-    MSGS_INFO("Comparando contraseña...")
+    TEXSTYLE_INFO("Comparando contraseña...")
 };
 
 const char *TEXT_WRONGPASSWORD = {
-    MSGS_WARNING("Contraseña incorrecta.")
+    TEXSTYLE_WARNING("Contraseña incorrecta.")
 };
 
 const char *TEXT_PASSWORDMATCH = {
-    MSGS_INFO("Contraseña OK.")
+    TEXSTYLE_INFO("Contraseña OK.")
 };
 
 const char *TEXT_ALARMARMINGBEGIN = {
-    MSGS_INFO("En %1 segundo(s) la alarma cambiará a estado ARMADA.")
+    TEXSTYLE_INFO("En %1 segundo(s) la alarma cambiará a estado ARMADA. "
+                  "Cancelar con 'x'.")
 };
 
 const char *TEXT_ALARMARMINGCANCELLED = {
-    MSGS_WARNING("Armado de alarma CANCELADO.")
+    TEXSTYLE_WARNING("Armado de alarma CANCELADO.")
 };
 
 const char *TEXT_ALARMARMINGEND = {
-    MSGS_INFO("Armando alarma...")
+    TEXSTYLE_INFO("Armando alarma...")
 };
 
 const char *TEXT_ARMEDPASSWORDTODISARM = {
-    MSGS_INFO("Alarma " TERM_COLOR_BOLD_RED "ARMADA" TERM_NO_COLOR
+    TEXSTYLE_INFO("Alarma " TERM_FG_COLOR_BOLD_RED "ARMADA" TERM_NO_COLOR
               ", presione 'p' para DESARMAR.")
 };
 
 const char *TEXT_SENSORWINDOW = {
-    MSGS_WARNING("SENSOR DE VENTANA ACTIVADO.")
+    TEXSTYLE_WARNING("SENSOR DE VENTANA ACTIVADO.")
 };
 
 const char *TEXT_SENSORDOOR = {
-    MSGS_WARNING("SENSOR DE PUERTA ACTIVADO.")
+    TEXSTYLE_WARNING("SENSOR DE PUERTA ACTIVADO.")
 };
 
 const char *TEXT_INTRUDERPASSWORDTODISARM = {
-    MSGS_CRITICAL("ALERTA DE INTRUSO! Presione 'p' para CANCELAR.")
+    TEXSTYLE_CRITICAL("ALERTA DE INTRUSO! Presione 'p' para CANCELAR.")
 };
 
 const char *TEXT_DOORPASSWORDTODISARM = {
-    MSGS_INFO("Modo " TERM_COLOR_BOLD_RED "INTRUSO" TERM_NO_COLOR
+    TEXSTYLE_INFO("Modo " TERM_FG_COLOR_BOLD_RED "INTRUSO" TERM_NO_COLOR
               " se activará en %1 segundo(s). Presione 'p' para CANCELAR.")
 };
 
 const char *TEXT_DOORPASSWORDTODISARMAGAIN = {
-    MSGS_WARNING("%1 intento(s) disponible(s).")
+    TEXSTYLE_WARNING("%1 intento(s) disponible(s).")
 };
 
 const char *TEXT_WRONGCOMMAND = {
-    MSGS_ERROR("Comando no reconocido.")
+    TEXSTYLE_ERROR("Comando no reconocido.")
 };
 
 const char *TEXT_INVALIDTASKSTATUS = {
-    MSGS_ERROR("Tarea en estado invalido.")
+    TEXSTYLE_ERROR("Tarea en estado invalido.")
 };

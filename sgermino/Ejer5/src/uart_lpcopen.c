@@ -32,55 +32,53 @@
 #include "chip.h"
 
 
-bool UART_Config (struct UART_Context *ctx, uint32_t baudRate)
+bool UART_Config (struct UART *u, uint32_t baudRate)
 {
-    if (!ctx || !ctx->handler)
+    if (!u || !u->handler)
     {
         return false;
     }
 
-    LPC_USART_T *uart = (LPC_USART_T *)ctx->handler;
+    LPC_USART_T *usart = (LPC_USART_T *)u->handler;
 
     // Periferico (MUX) ya configuado en board de LCPOpen
     // Aca solo se setean parametros
-    Chip_UART_Init          (uart);
-    Chip_UART_SetBaudFDR    (uart, baudRate);
-    Chip_UART_ConfigData    (uart, UART_LCR_WLEN8 | UART_LCR_PARITY_DIS |
+    Chip_UART_Init          (usart);
+    Chip_UART_SetBaudFDR    (usart, baudRate);
+    Chip_UART_ConfigData    (usart, UART_LCR_WLEN8 | UART_LCR_PARITY_DIS |
                              UART_LCR_SBS_1BIT);
-    Chip_UART_TXEnable      (uart);
+    Chip_UART_TXEnable      (usart);
     return true;
 }
 
 
-uint32_t UART_GetByte (struct UART_Context *ctx)
+uint32_t UART_GetByte (void *handler)
 {
-    if (!ctx || !ctx->handler)
+    if (!handler)
     {
         return UART_EOF;
     }
 
-    LPC_USART_T *uart = (LPC_USART_T *)ctx->handler;
-
-    if (Chip_UART_ReadLineStatus(uart) & UART_LSR_RDR)
+    LPC_USART_T *usart = (LPC_USART_T *)handler;
+    if (Chip_UART_ReadLineStatus(usart) & UART_LSR_RDR)
     {
-        return Chip_UART_ReadByte (uart);
+        return Chip_UART_ReadByte (usart);
     }
     return UART_EOF;
 }
 
 
-bool UART_PutByte (struct UART_Context *ctx, uint8_t byte)
+bool UART_PutByte (void *handler, uint8_t byte)
 {
-    if (!ctx || !ctx->handler)
+    if (!handler)
     {
         return false;
     }
 
-    LPC_USART_T *uart = (LPC_USART_T *)ctx->handler;
-
-    while ((Chip_UART_ReadLineStatus(uart) & UART_LSR_THRE) == 0)
+    LPC_USART_T *usart = (LPC_USART_T *)handler;
+    while ((Chip_UART_ReadLineStatus(usart) & UART_LSR_THRE) == 0)
     {
     }
-    Chip_UART_SendByte (uart, byte);
+    Chip_UART_SendByte (usart, byte);
     return true;
 }

@@ -32,23 +32,23 @@
 #include "term.h"
 
 
-#define MSGS_NL             "\r\n"
-#define MSGS_PREFIX_INFO    "░░ "
-#define MSGS_PREFIX_WARNING "▓▓ "
-#define MSGS_PREFIX_ERROR   "▓▓ "
-#define MSGS_PREFIX_GROUP   " ░ "
+#define TEXSTYLE_NL             "\r\n"
+#define TEXSTYLE_PREFIX_INFO    "░░ "
+#define TEXSTYLE_PREFIX_WARNING "▓▓ "
+#define TEXSTYLE_PREFIX_ERROR   "▓▓ "
+#define TEXSTYLE_PREFIX_GROUP   " ░ "
 
-#define MSGS_INFO_BEGIN     MSGS_PREFIX_INFO
-#define MSGS_INFO_END       MSGS_NL
-#define MSGS_INFO(s)        MSGS_INFO_BEGIN s MSGS_INFO_END
+#define TEXSTYLE_INFO_BEGIN     TEXSTYLE_PREFIX_INFO
+#define TEXSTYLE_INFO_END       TEXSTYLE_NL
+#define TEXSTYLE_INFO(s)        TEXSTYLE_INFO_BEGIN s TEXSTYLE_INFO_END
 
-#define MSGS_COLOR_BEGIN(c) TERM_COLOR_##c \
-                            MSGS_PREFIX_ERROR
-#define MSGS_COLOR_END      TERM_NO_COLOR \
-                            MSGS_NL
-#define MSGS_COLOR(c,s)     MSGS_COLOR_BEGIN(c) s MSGS_COLOR_END
+#define TEXSTYLE_COLOR_BEGIN(c) TERM_FG_COLOR_##c \
+                                TEXSTYLE_PREFIX_ERROR
+#define TEXSTYLE_COLOR_END      TERM_NO_COLOR \
+                                TEXSTYLE_NL
+#define TEXSTYLE_COLOR(c,s)     TEXSTYLE_COLOR_BEGIN(c) s TEXSTYLE_COLOR_END
 
-#define MSGS_WARNING(s)     MSGS_COLOR(BROWN,s)
-#define MSGS_ERROR(s)       MSGS_COLOR(RED,s)
-#define MSGS_OK(s)          MSGS_COLOR(BOLD_GREEN,s)
-#define MSGS_CRITICAL(s)    MSGS_COLOR(BOLD_RED,s)
+#define TEXSTYLE_WARNING(s)     TEXSTYLE_COLOR(BROWN,s)
+#define TEXSTYLE_ERROR(s)       TEXSTYLE_COLOR(RED,s)
+#define TEXSTYLE_OK(s)          TEXSTYLE_COLOR(BOLD_GREEN,s)
+#define TEXSTYLE_CRITICAL(s)    TEXSTYLE_COLOR(BOLD_RED,s)

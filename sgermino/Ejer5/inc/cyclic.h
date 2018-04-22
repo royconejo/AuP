@@ -29,8 +29,43 @@
     POSSIBILITY OF SUCH DAMAGE.
 */
 #pragma once
-#include "fem.h"
-#include "uart.h"
+#include "stream.h"
+#include <stdint.h>
+#include <stdbool.h>
 
 
-void FEM_PutStatusMessage (struct FEM *f, struct UART *uart);
+struct CYCLIC
+{
+    uint8_t     *data;
+    uint32_t    capacity;
+    // in: producer / data input
+    uint32_t    inIndex;
+    // out: consumer / data output
+    uint32_t    outIndex;
+    uint32_t    reads;
+    uint32_t    writes;
+    uint32_t    overflows;
+    uint32_t    peeks;
+    uint32_t    discards;
+};
+
+
+bool        CYCLIC_Init             (struct CYCLIC *c, uint8_t *data,
+                                     uint32_t capacity);
+uint32_t    CYCLIC_Pending          (struct CYCLIC *c);
+bool        CYCLIC_In               (struct CYCLIC *c, const uint8_t data);
+bool        CYCLIC_InFromBuffer     (struct CYCLIC *c, const uint8_t *data,
+                                     uint32_t size);
+uint32_t    CYCLIC_InFromStream     (struct CYCLIC *c,
+                                     STREAM_ByteInFunc streamFunc,
+                                     void *streamFuncHandler,
+                                     uint32_t EOFSignal);
+bool        CYCLIC_Out              (struct CYCLIC *c, uint8_t *data);
+bool        CYCLIC_OutToBuffer      (struct CYCLIC *c, uint8_t *data,
+                                     uint32_t count);
+uint32_t    CYCLIC_OutToStream      (struct CYCLIC *c,
+                                     STREAM_ByteOutFunc streamFunc,
+                                     void *streamFuncHandler,
+                                     uint32_t maxBytes);
+uint8_t     CYCLIC_Peek             (struct CYCLIC *c, uint32_t offset);
+bool        CYCLIC_DiscardPending   (struct CYCLIC *c);

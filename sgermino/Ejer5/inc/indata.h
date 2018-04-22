@@ -55,21 +55,20 @@ enum INDATA_Type
 };
 
 
-struct INDATA_Context
+struct INDATA
 {
     enum INDATA_Status  status;
     enum INDATA_Type    type;
-    struct UART_Context *uart;
+    struct UART         *uart;
     struct ARRAY        a;
     uint8_t             data [INDATA_BUFFER_SIZE];
 };
 
 
-bool                INDATA_Init         (struct INDATA_Context *ctx,
-                                         struct UART_Context *uartCtx);
-bool                INDATA_Begin        (struct INDATA_Context *ctx,
+bool                INDATA_Init         (struct INDATA *d, struct UART *uart);
+bool                INDATA_Begin        (struct INDATA *d,
                                          enum INDATA_Type type);
-enum INDATA_Status  INDATA_Status       (struct INDATA_Context *ctx);
-bool                INDATA_Prompt       (struct INDATA_Context *ctx);
-struct ARRAY *      INDATA_Data         (struct INDATA_Context *ctx);
-bool                INDATA_End          (struct INDATA_Context *ctx);
+enum INDATA_Status  INDATA_Status       (struct INDATA *d);
+bool                INDATA_Prompt       (struct INDATA *d);
+struct ARRAY *      INDATA_Data         (struct INDATA *d);
+bool                INDATA_End          (struct INDATA *d);

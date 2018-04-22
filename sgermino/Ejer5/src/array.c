@@ -88,13 +88,35 @@ bool ARRAY_Append (struct ARRAY *a, uint8_t element)
 
 bool ARRAY_AppendString (struct ARRAY *a, const char *str)
 {
+    if (!a || !str)
+    {
+        return false;
+    }
+
     while (*str)
     {
-        if (!ARRAY_Append (a, (uint8_t)*str))
+        if (!ARRAY_Append (a, (uint8_t)*str ++))
         {
             return false;
         }
-        (void) *str ++;
+    }
+    return true;
+}
+
+
+bool ARRAY_AppendBinary (struct ARRAY *a, const uint8_t *data, uint32_t size)
+{
+    if (!a || !data || !size)
+    {
+        return false;
+    }
+
+    while (size --)
+    {
+        if (!ARRAY_Append (a, *data ++))
+        {
+            return false;
+        }
     }
     return true;
 }
@@ -160,7 +182,8 @@ bool ARRAY_CheckAlnumChars (struct ARRAY *a)
                 continue;
             }
         }
-        else if (((a->data[i + 0] & 0b11100000) == 0b11000000) &&
+        else if (i + 1 < a->index &&
+                 ((a->data[i + 0] & 0b11100000) == 0b11000000) &&
                  ((a->data[i + 1] & 0b11000000) == 0b10000000))
         {
             const uint16_t Code = (a->data[i + 0] & 0b00011111) << 6 |

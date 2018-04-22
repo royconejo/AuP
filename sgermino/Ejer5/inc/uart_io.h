@@ -35,6 +35,7 @@
 #define UART_EOF    0xFFFFFFFF
 
 
-bool        UART_Config     (struct UART_Context *ctx, uint32_t baudRate);
-uint32_t    UART_GetByte    (struct UART_Context *ctx);
-bool        UART_PutByte    (struct UART_Context *ctx, uint8_t byte);
+bool        UART_Config     (struct UART *ctx, uint32_t baudRate);
+// Get and Put conform to STREAM_ByteIn/Out prototypes
+uint32_t    UART_GetByte    (void *handler);
+bool        UART_PutByte    (void *handler, uint8_t byte);
