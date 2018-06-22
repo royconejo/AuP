@@ -42,11 +42,11 @@ const char *TEXT_UART_STATSEND = {
     TEXSTYLE_INFO_END
 };
 
-const char *TEXT_FEM_STATSBEGIN = {
+const char *TEXT_FSM_STATSBEGIN = {
     TEXSTYLE_INFO_BEGIN "Parámetros de la máquina de estado:" TEXSTYLE_NL
 };
 
-const char *TEXT_FEM_STATSEND = {
+const char *TEXT_FSM_STATSEND = {
     TEXSTYLE_INFO_END
 };
 

@@ -61,7 +61,7 @@ const char *TEXT_UART_STATS2 = {
     TEXSTYLE_PREFIX_GROUP "  discards  : %6"
 };
 
-const char *TEXT_FEM_STATS1 = {
+const char *TEXT_FSM_STATS1 = {
     TEXSTYLE_PREFIX_GROUP "State             : %1" TEXSTYLE_NL
     TEXSTYLE_PREFIX_GROUP "  info            : \"%2\"" TEXSTYLE_NL
     TEXSTYLE_PREFIX_GROUP "  calls           : %3" TEXSTYLE_NL
@@ -73,7 +73,7 @@ const char *TEXT_FEM_STATS1 = {
     TEXSTYLE_PREFIX_GROUP "    start ticks   : %9" TEXSTYLE_NL
 };
 
-const char *TEXT_FEM_STATS2 = {
+const char *TEXT_FSM_STATS2 = {
     TEXSTYLE_PREFIX_GROUP "Error states" TEXSTYLE_NL
     TEXSTYLE_PREFIX_GROUP "  invalid stage   : %1" TEXSTYLE_NL
     TEXSTYLE_PREFIX_GROUP "  max rec. calls  : %2"

@@ -29,8 +29,8 @@
     POSSIBILITY OF SUCH DAMAGE.
 */
 #pragma once
-#include "fem.h"
+#include "fsm.h"
 #include "uart.h"
 
 
-void FEM_PutStatusMessage (struct FEM *f, struct UART *uart);
+void FSM_PutStatusMessage (struct FEM *f, struct UART *uart);

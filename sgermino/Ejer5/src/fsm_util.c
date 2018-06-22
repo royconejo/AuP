@@ -1,10 +1,10 @@
-#include "fem_util.h"
+#include "fsm_util.h"
 #include "uart_util.h"
 #include "text.h"
 #include "variant.h"
 
 
-void FEM_PutStatusMessage (struct FEM *f, struct UART *uart)
+void FSM_PutStatusMessage (struct FEM *f, struct UART *uart)
 {
     struct VARIANT args[9];
     VARIANT_SetPointer  (&args[0], f->state);
@@ -17,12 +17,12 @@ void FEM_PutStatusMessage (struct FEM *f, struct UART *uart)
     VARIANT_SetUint32   (&args[7], f->stateCalls);
     VARIANT_SetUint32   (&args[8], f->stateStartTicks);
 
-    UART_PutMessage     (uart, TEXT_FEM_STATSBEGIN);
-    UART_PutMessageArgs (uart, TEXT_FEM_STATS1, args, 9);
+    UART_PutMessage     (uart, TEXT_FSM_STATSBEGIN);
+    UART_PutMessageArgs (uart, TEXT_FSM_STATS1, args, 9);
 
     VARIANT_SetPointer  (&args[0], f->invalidStage);
     VARIANT_SetPointer  (&args[1], f->maxRecCalls);
 
-    UART_PutMessageArgs (uart, TEXT_FEM_STATS2, args, 2);
-    UART_PutMessage     (uart, TEXT_FEM_STATSEND);
+    UART_PutMessageArgs (uart, TEXT_FSM_STATS2, args, 2);
+    UART_PutMessage     (uart, TEXT_FSM_STATSEND);
 }

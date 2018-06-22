@@ -30,19 +30,11 @@
 */
 #pragma once
 
+#ifndef __cplusplus
+    #error "Please include retro_ciaa.h within 'C' code."
+#endif
 
-extern const char *TEXT_NEWLINE;
-extern const char *TEXT_REPLACEMENTCHAR;
-extern const char *TEXT_UART_STATSBEGIN;
-extern const char *TEXT_UART_STATS1;
-extern const char *TEXT_UART_STATS2;
-extern const char *TEXT_UART_STATSEND;
-extern const char *TEXT_FSM_STATSBEGIN;
-extern const char *TEXT_FSM_STATS1;
-extern const char *TEXT_FSM_STATS2;
-extern const char *TEXT_FSM_STATSEND;
-extern const char *TEXT_INDATA_TOOLONG;
-extern const char *TEXT_INDATA_VALIDATING;
-extern const char *TEXT_INDATA_WRONGTYPEINT;
-extern const char *TEXT_INDATA_WRONGTYPEALNUM;
-extern const char *TEXT_INDATA_NOTYPEVAL;
+extern "C"
+{
+    #include "retro_ciaa.h"
+}

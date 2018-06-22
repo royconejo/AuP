@@ -34,8 +34,8 @@
 #include "term.h"
 #include "array.h"
 #include "indata.h"
-#include "fem.h"
-#include "fem_util.h"
+#include "fsm.h"
+#include "fsm_util.h"
 #include "btn.h"
 #include "copos.h"
 #include "systick.h"
@@ -74,16 +74,16 @@ Actividad
 */
 
 
-enum FEM_StateReturn FEMState_Desarmada (struct FEM *f,
-                                        enum FEM_Stage stage, uint32_t ticks);
-enum FEM_StateReturn FEMState_DiegoArmando (struct FEM *f,
-                                       enum FEM_Stage stage, uint32_t ticks);
-enum FEM_StateReturn FEMState_Armada (struct FEM *f,
-                                      enum FEM_Stage stage, uint32_t ticks);
-enum FEM_StateReturn FEMState_Intruso (struct FEM *f,
-                                       enum FEM_Stage stage, uint32_t ticks);
-enum FEM_StateReturn FEMState_Desarmando (struct FEM *f,
-                                          enum FEM_Stage stage, uint32_t ticks);
+enum FSM_StateReturn FEMState_Desarmada (struct FEM *f,
+                                        enum FSM_Stage stage, uint32_t ticks);
+enum FSM_StateReturn FEMState_DiegoArmando (struct FEM *f,
+                                       enum FSM_Stage stage, uint32_t ticks);
+enum FSM_StateReturn FEMState_Armada (struct FEM *f,
+                                      enum FSM_Stage stage, uint32_t ticks);
+enum FSM_StateReturn FEMState_Intruso (struct FEM *f,
+                                       enum FSM_Stage stage, uint32_t ticks);
+enum FSM_StateReturn FEMState_Desarmando (struct FEM *f,
+                                          enum FSM_Stage stage, uint32_t ticks);
 
 
 #define     ARMING_PERIOD_MSEC      6000
@@ -135,8 +135,8 @@ bool APP_Init (struct APP *a)
     INDATA_Init     (&a->indata, &a->uart);
     ARRAY_Init      (&a->password, a->passwordData,
                      sizeof(a->passwordData));
-    FEM_Init        (&a->mainFem, a);
-    FEM_ChangeState (&a->mainFem, FEMState_Desarmada);
+    FSM_Init        (&a->mainFem, a);
+    FSM_ChangeState (&a->mainFem, FEMState_Desarmada);
 
     // Password inicial
     ARRAY_AppendString (&a->password, "1234");
@@ -225,26 +225,26 @@ enum APP_PasswordLogicAction APP_PasswordLogic (struct APP *a)
 }
 
 
-enum FEM_StateReturn FEMState_Desarmada (struct FEM *f,
-                                        enum FEM_Stage stage, uint32_t ticks)
+enum FSM_StateReturn FEMState_Desarmada (struct FEM *f,
+                                        enum FSM_Stage stage, uint32_t ticks)
 {
-    FEM_SetStateInfo (f, __FUNCTION__);
+    FSM_SetStateInfo (f, __FUNCTION__);
 
     struct APP  *app  = (struct APP *)  f->app;
     struct UART *uart = (struct UART *) &app->uart;
 
     switch (stage)
     {
-        case FEM_StageBegin:
+        case FSM_StageBegin:
             APP_ClearRequests   (app);
             //  6)  Cuando la alarma esté desarmada se debe encender el led RGB
             //      verde fijo.
             APP_UpdateLed       (app, LED_GREEN, true, false);
             UART_PutMessage     (uart, TEXT_PASSWORDTOARM);
-            FEM_GotoStage       (f, FEM_StageMain);
+            FSM_GotoStage       (f, FSM_StageMain);
             break;
 
-        case FEM_StageMain:
+        case FSM_StageMain:
         {
             const enum APP_PasswordLogicAction Pl = APP_PasswordLogic (app);
             if (Pl == APP_PasswordLogicAction_Asking)
@@ -253,92 +253,92 @@ enum FEM_StateReturn FEMState_Desarmada (struct FEM *f,
             }
             else if (Pl == APP_PasswordLogicAction_AskAgain)
             {
-                FEM_GotoStage       (f, FEM_StageBegin);
+                FSM_GotoStage       (f, FSM_StageBegin);
             }
             else if (Pl == APP_PasswordLogicAction_Match)
             {
-                FEM_ChangeState     (f, FEMState_DiegoArmando);
+                FSM_ChangeState     (f, FEMState_DiegoArmando);
             }
             break;
         }
 
-        case FEM_StageEnd:
+        case FSM_StageEnd:
             break;
     }
 
-    return FEM_StateReturnYield;
+    return FSM_StateReturnYield;
 }
 
 
-enum FEM_StateReturn FEMState_DiegoArmando (struct FEM *f,
-                                       enum FEM_Stage stage, uint32_t ticks)
+enum FSM_StateReturn FEMState_DiegoArmando (struct FEM *f,
+                                       enum FSM_Stage stage, uint32_t ticks)
 {
-    FEM_SetStateInfo (f, __FUNCTION__);
+    FSM_SetStateInfo (f, __FUNCTION__);
 
     struct APP  *app  = (struct APP *)  f->app;
     struct UART *uart = (struct UART *) &app->uart;
 
     switch (stage)
     {
-        case FEM_StageBegin:
+        case FSM_StageBegin:
             APP_ClearRequests   (app);
             VARIANT_SetUint32   (&app->vtmp, ARMING_PERIOD_MSEC / 1000);
             UART_PutMessageArgs (uart, TEXT_ALARMARMINGBEGIN,
                                  &app->vtmp, 1);
             APP_UpdateLed       (app, LED_GREEN, true, true);
-            FEM_GotoStage       (f, FEM_StageMain);
+            FSM_GotoStage       (f, FSM_StageMain);
             break;
 
-        case FEM_StageMain:
+        case FSM_StageMain:
             if (app->cancelRequest)
             {
                 APP_ClearRequests   (app);
                 UART_PutMessage     (uart, TEXT_ALARMARMINGCANCELLED);
-                FEM_ChangeState     (f, FEMState_Desarmada);
+                FSM_ChangeState     (f, FEMState_Desarmada);
             }
-            else if (FEM_StageTimeout (f, ARMING_PERIOD_MSEC))
+            else if (FSM_StageTimeout (f, ARMING_PERIOD_MSEC))
             {
-                FEM_GotoStage (f, FEM_StageEnd);
+                FSM_GotoStage (f, FSM_StageEnd);
             }
             break;
 
-        case FEM_StageEnd:
+        case FSM_StageEnd:
             UART_PutMessage     (uart, TEXT_ALARMARMINGEND);
             APP_UpdateLed       (app, LED_GREEN, false, false);
-            FEM_ChangeState     (f, FEMState_Armada);
+            FSM_ChangeState     (f, FEMState_Armada);
             break;
     }
 
-    return FEM_StateReturnYield;
+    return FSM_StateReturnYield;
 }
 
 
-enum FEM_StateReturn FEMState_Armada (struct FEM *f,
-                                      enum FEM_Stage stage, uint32_t ticks)
+enum FSM_StateReturn FEMState_Armada (struct FEM *f,
+                                      enum FSM_Stage stage, uint32_t ticks)
 {
-    FEM_SetStateInfo (f, __FUNCTION__);
+    FSM_SetStateInfo (f, __FUNCTION__);
 
     struct APP  *app  = (struct APP *)  f->app;
     struct UART *uart = (struct UART *) &app->uart;
 
     switch (stage)
     {
-        case FEM_StageBegin:
+        case FSM_StageBegin:
             APP_ClearRequests   (app);
             UART_PutMessage     (uart, TEXT_ARMEDPASSWORDTODISARM);
             //  7)  Cuando la alarma esté armada se debe encender el led RGB
             //      rojo fijo
             APP_UpdateLed       (app, LED_RED, true, false);
-            FEM_GotoStage       (f, FEM_StageMain);
+            FSM_GotoStage       (f, FSM_StageMain);
             break;
 
-        case FEM_StageMain:
+        case FSM_StageMain:
         {
             // Se activo un sensor?
             if (app->sensorStatus)
             {
-                FEM_GotoStage   (f, FEM_StageEnd);
-                return FEM_StateReturnAgain;
+                FSM_GotoStage   (f, FSM_StageEnd);
+                return FSM_StateReturnAgain;
             }
 
             const enum APP_PasswordLogicAction Pl = APP_PasswordLogic (app);
@@ -348,56 +348,56 @@ enum FEM_StateReturn FEMState_Armada (struct FEM *f,
             }
             else if (Pl == APP_PasswordLogicAction_AskAgain)
             {
-                FEM_GotoStage   (f, FEM_StageBegin);
+                FSM_GotoStage   (f, FSM_StageBegin);
             }
             else if (Pl == APP_PasswordLogicAction_Match)
             {
-                FEM_ChangeState (f, FEMState_Desarmada);
+                FSM_ChangeState (f, FEMState_Desarmada);
             }
             break;
         }
 
-        case FEM_StageEnd:
+        case FSM_StageEnd:
             // Discrimina cual sensor se activo
             if (app->sensorStatus & ~SENSOR_DOOR)
             {
                UART_PutMessage  (uart, TEXT_SENSORWINDOW);
-               FEM_ChangeState  (f, FEMState_Intruso);
+               FSM_ChangeState  (f, FEMState_Intruso);
             }
             else if (app->sensorStatus & SENSOR_DOOR)
             {
                UART_PutMessage  (uart, TEXT_SENSORDOOR);
-               FEM_ChangeState  (f, FEMState_Desarmando);
+               FSM_ChangeState  (f, FEMState_Desarmando);
             }
 
             APP_UpdateLed (app, LED_RED, false, false);
             break;
     }
 
-    return FEM_StateReturnYield;
+    return FSM_StateReturnYield;
 }
 
 
-enum FEM_StateReturn FEMState_Intruso (struct FEM *f,
-                                        enum FEM_Stage stage, uint32_t ticks)
+enum FSM_StateReturn FEMState_Intruso (struct FEM *f,
+                                        enum FSM_Stage stage, uint32_t ticks)
 {
-    FEM_SetStateInfo (f, __FUNCTION__);
+    FSM_SetStateInfo (f, __FUNCTION__);
 
     struct APP  *app  = (struct APP *)  f->app;
     struct UART *uart = (struct UART *) &app->uart;
 
     switch (stage)
     {
-        case FEM_StageBegin:
+        case FSM_StageBegin:
             APP_ClearRequests   (app);
             UART_PutMessage     (uart, TEXT_INTRUDERPASSWORDTODISARM);
             //  8)  Cuando la alarma esté disparada (intruso) se debe parpadear
             //      el led RGB rojo.
             APP_UpdateLed       (app, LED_RED, true, true);
-            FEM_GotoStage       (f, FEM_StageMain);
+            FSM_GotoStage       (f, FSM_StageMain);
             break;
 
-        case FEM_StageMain:
+        case FSM_StageMain:
         {
             const enum APP_PasswordLogicAction Pl = APP_PasswordLogic (app);
             if (Pl == APP_PasswordLogicAction_Asking)
@@ -406,49 +406,49 @@ enum FEM_StateReturn FEMState_Intruso (struct FEM *f,
             }
             else if (Pl == APP_PasswordLogicAction_AskAgain)
             {
-                FEM_GotoStage   (f, FEM_StageBegin);
+                FSM_GotoStage   (f, FSM_StageBegin);
             }
             else if (Pl == APP_PasswordLogicAction_Match)
             {
-                FEM_ChangeState (f, FEMState_Desarmada);
+                FSM_ChangeState (f, FEMState_Desarmada);
             }
             break;
         }
 
-        case FEM_StageEnd:
+        case FSM_StageEnd:
             break;
     }
 
-    return FEM_StateReturnYield;
+    return FSM_StateReturnYield;
 }
 
 
-enum FEM_StateReturn FEMState_Desarmando (struct FEM *f, enum FEM_Stage stage,
+enum FSM_StateReturn FEMState_Desarmando (struct FEM *f, enum FSM_Stage stage,
                                           uint32_t ticks)
 {
-    FEM_SetStateInfo (f, __FUNCTION__);
+    FSM_SetStateInfo (f, __FUNCTION__);
 
     struct APP  *app  = (struct APP *)  f->app;
     struct UART *uart = (struct UART *) &app->uart;
 
     switch (stage)
     {
-        case FEM_StageBegin:
+        case FSM_StageBegin:
             app->disarmRetries = 0;
             APP_ClearRequests   (app);
-            FEM_StateCountdown  (f, DOOR_DISARMING_MSEC);
-            VARIANT_SetUint32   (&app->vtmp, FEM_StateCountdownSeconds(f));
+            FSM_StateCountdown  (f, DOOR_DISARMING_MSEC);
+            VARIANT_SetUint32   (&app->vtmp, FSM_StateCountdownSeconds(f));
             UART_PutMessageArgs (uart, TEXT_DOORPASSWORDTODISARM,
                                  &app->vtmp, 1);
             APP_UpdateLed       (app, LED_RED, true, false);
-            FEM_GotoStage       (f, FEM_StageMain);
-            return FEM_StateReturnAgain;
+            FSM_GotoStage       (f, FSM_StageMain);
+            return FSM_StateReturnAgain;
 
-        case FEM_StageMain:
-            if (FEM_StateCountdown (f, 0))
+        case FSM_StageMain:
+            if (FSM_StateCountdown (f, 0))
             {
-                FEM_ChangeState (f, FEMState_Intruso);
-                return FEM_StateReturnYield;
+                FSM_ChangeState (f, FEMState_Intruso);
+                return FSM_StateReturnYield;
             }
 
             const enum APP_PasswordLogicAction Pl = APP_PasswordLogic (app);
@@ -460,8 +460,8 @@ enum FEM_StateReturn FEMState_Desarmando (struct FEM *f, enum FEM_Stage stage,
             {
                 if (++ app->disarmRetries >= DOOR_DISARM_MAX_RETRIES)
                 {
-                    FEM_ChangeState (f, FEMState_Intruso);
-                    return FEM_StateReturnYield;
+                    FSM_ChangeState (f, FEMState_Intruso);
+                    return FSM_StateReturnYield;
                 }
                 // Reintenta
                 APP_UpdateLed       (app, LED_RED, true, false);
@@ -470,21 +470,21 @@ enum FEM_StateReturn FEMState_Desarmando (struct FEM *f, enum FEM_Stage stage,
                 UART_PutMessageArgs (uart, TEXT_DOORPASSWORDTODISARMAGAIN,
                                      &app->vtmp, 1);
                 VARIANT_SetUint32   (&app->vtmp,
-                                     FEM_StateCountdownSeconds(f));
+                                     FSM_StateCountdownSeconds(f));
                 UART_PutMessageArgs (uart, TEXT_DOORPASSWORDTODISARM,
                                      &app->vtmp, 1);
             }
             else if (Pl == APP_PasswordLogicAction_Match)
             {
-                FEM_ChangeState     (f, FEMState_DiegoArmando);
+                FSM_ChangeState     (f, FEMState_DiegoArmando);
             }
             break;
 
-        case FEM_StageEnd:
+        case FSM_StageEnd:
             break;
     }
 
-    return FEM_StateReturnYield;
+    return FSM_StateReturnYield;
 }
 
 
@@ -539,7 +539,7 @@ static void processCommand (struct APP *a)
             break;
 
         case 'm':
-            FEM_PutStatusMessage (&a->mainFem, uart);
+            FSM_PutStatusMessage (&a->mainFem, uart);
             break;
 
         case 'c':
@@ -628,7 +628,7 @@ void sensorOutputsTask (void *ctx, uint32_t ticks)
 void alarmFEMTask (void *ctx, uint32_t ticks)
 {
     struct APP *app = (struct APP *) ctx;
-    FEM_Process (&app->mainFem, ticks, 1);
+    FSM_Process (&app->mainFem, ticks, 1);
 }
 
 

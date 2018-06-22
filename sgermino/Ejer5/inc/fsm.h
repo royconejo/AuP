@@ -33,36 +33,36 @@
 #include <stdbool.h>
 
 
-#ifndef FEM_MAX_RECURRING_CALLS
-    #define FEM_MAX_RECURRING_CALLS     99
+#ifndef FSM_MAX_RECURRING_CALLS
+    #define FSM_MAX_RECURRING_CALLS     99
 #endif
 
 
-enum FEM_Stage
+enum FSM_Stage
 {
-    FEM_StageBegin = 0,
-    FEM_StageMain,
-    FEM_StageEnd,
-    FEM_Stage_LAST_ = FEM_StageEnd
+    FSM_StageBegin = 0,
+    FSM_StageMain,
+    FSM_StageEnd,
+    FSM_Stage_LAST_ = FSM_StageEnd
 };
 
 
-enum FEM_StateReturn
+enum FSM_StateReturn
 {
-    FEM_StateReturnYield = 0,
-    FEM_StateReturnAgain
+    FSM_StateReturnYield = 0,
+    FSM_StateReturnAgain
 };
 
 
 struct FEM;
-typedef enum FEM_StateReturn (* FEM_StateFunc) (struct FEM *f,
-                                         enum FEM_Stage stage, uint32_t ticks);
+typedef enum FSM_StateReturn (* FSM_StateFunc) (struct FEM *f,
+                                         enum FSM_Stage stage, uint32_t ticks);
 
 
 struct FEM
 {
-    FEM_StateFunc   state;
-    enum FEM_Stage  stage;
+    FSM_StateFunc   state;
+    enum FSM_Stage  stage;
     const char      *info;
     uint32_t        stateCalls;
     uint32_t        stageCalls;
@@ -70,22 +70,22 @@ struct FEM
     uint32_t        stageStartTicks;
     uint32_t        stateCountdownTicks;
     void            *app;
-    FEM_StateFunc   invalidStage;
-    FEM_StateFunc   maxRecCalls;
+    FSM_StateFunc   invalidStage;
+    FSM_StateFunc   maxRecCalls;
 };
 
 
-bool        FEM_Init           (struct FEM *f, void *app);
-bool        FEM_SetErrorStates (struct FEM *f,
-                                FEM_StateFunc invalidStage,
-                                FEM_StateFunc maxRecurringCalls);
-bool        FEM_SetStateInfo   (struct FEM *f, const char* info);
-bool        FEM_StateTimeout   (struct FEM *f, uint32_t timeoutTicks);
-bool        FEM_StageTimeout   (struct FEM *f, uint32_t timeoutTicks);
-bool        FEM_StateCountdown (struct FEM *f, uint32_t timeoutTicks);
-uint32_t    FEM_StateCountdownSeconds
+bool        FSM_Init           (struct FEM *f, void *app);
+bool        FSM_SetErrorStates (struct FEM *f,
+                                FSM_StateFunc invalidStage,
+                                FSM_StateFunc maxRecurringCalls);
+bool        FSM_SetStateInfo   (struct FEM *f, const char* info);
+bool        FSM_StateTimeout   (struct FEM *f, uint32_t timeoutTicks);
+bool        FSM_StageTimeout   (struct FEM *f, uint32_t timeoutTicks);
+bool        FSM_StateCountdown (struct FEM *f, uint32_t timeoutTicks);
+uint32_t    FSM_StateCountdownSeconds
                                (struct FEM *f);
-bool        FEM_GotoStage      (struct FEM *f, enum FEM_Stage newStage);
-bool        FEM_ChangeState    (struct FEM *f, FEM_StateFunc newState);
-bool        FEM_Process        (struct FEM *f, uint32_t curTicks,
+bool        FSM_GotoStage      (struct FEM *f, enum FSM_Stage newStage);
+bool        FSM_ChangeState    (struct FEM *f, FSM_StateFunc newState);
+bool        FSM_Process        (struct FEM *f, uint32_t curTicks,
                                 uint32_t timeoutTicks);
